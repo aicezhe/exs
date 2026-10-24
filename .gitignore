@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.local
+.env*.local
+
+# Python
+model/.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Data and large outputs
+model/data/
+model/exported/*.tflite
+
+# Node / Next.js
+server/node_modules/
+server/.next/
+server/next-env.d.ts
+
+# OS / editors
+.DS_Store
+.vscode/
