@@ -1,0 +1,41 @@
+/* Colour tokens: single neon night theme, read by main.js */
+:root{
+  --bg:#090B24;
+  --surface:#0D1031;
+  --ink:#FFFFFF;
+  --muted:#AEB4E8;
+  --line:#272D66;
+  --accent:#FFFFFF;
+  --signal:#FF4FA8;
+  --cyan:#4FD6FF;
+  --heat-lo:#12163F;
+  --heat-mid:#FF4FA8;
+  --heat-hi:#FFFFFF;
+  color-scheme:dark;
+}
+
+/* Full-viewport canvas, no scroll */
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}
+canvas{display:block;width:100vw;height:100vh;touch-action:none} /* touch drags and pinches go to the scenes */
+
+/* Scene controls (same on every page): ← and → at the top corners beside the title, the mode switch at the bottom right */
+.controls{display:contents}
+/* all four corner elements (←, →, the footnote drawn in main.js, the mode switch) sit 16px from their corners */
+.controls #prev,.controls #next,.controls #mode,.controls #play{position:fixed}
+.controls #prev{top:16px;left:16px}
+.controls #next{top:16px;right:16px}
+.controls #mode,.controls #play{bottom:16px;right:16px} /* the same corner: mode on page 1, play / pause on the others */
+.controls button{width:40px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  font:600 15px "JetBrains Mono",ui-monospace,Menlo,monospace;cursor:pointer;display:grid;place-items:center;padding:0}
+.controls button:hover{border-color:var(--signal)}
+.controls button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+/* scene 1 mode switch: auto (loop) / manual (click a letter) */
+.controls #mode svg,.controls #play svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.controls #mode[aria-pressed="true"]{color:var(--signal);border-color:var(--signal)}
+.controls button[hidden]{display:none}
+
+/* scene 1: one transparent button over each graph segment (t, a, m) */
+.seg{position:fixed;margin:0;padding:0;border:0;border-radius:2px;background:transparent;cursor:pointer}
+.seg:hover{background:rgba(255,255,255,.05)}
+.seg:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.seg[hidden]{display:none}
