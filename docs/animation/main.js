@@ -1060,7 +1060,7 @@ const FOOT = [true, true, false, false, false, false]; // pages with the "slowed
 const INSET = 16, BTN = 36; // corner inset and button height, as in style.css: the title and the footnote line up with the buttons
 function drawTitle() {
   const pad = INSET, num = "0" + (step + 1) + " · ", size = FS * 1.25, y = INSET + BTN / 2, title = TXT[lang].steps[step];
-  g.font = font(size, 600); const nw = g.measureText(num).width, tw = Math.min(g.measureText(title).width, W - 2 * (pad + 56) - nw); // clear of the ← → buttons
+  g.font = font(size, 600); const nw = g.measureText(num).width, tw = Math.min(g.measureText(title).width, W - 2 * (W < 640 ? 112 : 120) - nw); // clear of the "all blocks" link at the left and the ← → buttons at the right
   const X = W / 2 - (nw + tw) / 2;
   text(num, X, y, { b: "middle", c: C.sig, w: 600, size });
   text(title, X + nw, y, { b: "middle", c: C.ink, w: 600, size, max: tw });
