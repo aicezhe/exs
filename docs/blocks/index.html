@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exs · Navigation</title>
+<style>
+  :root {
+    --bg0: #030720;
+    --link: #3b7bff;
+    --pink: #ff4fa3;
+    --setting: #9db8ff;
+    --ink: #e8eeff;
+    --muted: #8fa0d6;
+    --panel: rgba(8, 16, 64, .72);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg0); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: radial-gradient(ellipse at 50% 35%, #0d1b6b 0%, #07103f 45%, #030720 100%) fixed; }
+  canvas#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  a { color: inherit; text-decoration: none; }
+
+  main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 36px 20px 64px; min-height: 100vh; }
+  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  .brand { margin: 8px 0 0; font: 600 clamp(28px, 4vw, 44px)/1.1 var(--mono); letter-spacing: -.02em; }
+  .tag { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+
+  .view { display: none; }
+  .view.on { display: block; animation: rise .4s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* Home: three big rows */
+  #home { margin-top: 8vh; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    padding: clamp(14px, 3vh, 28px) 4px; border-bottom: 1px solid rgba(143, 160, 214, .22);
+    transition: padding-left .25s ease, border-color .25s ease; }
+  .row:last-child { border-bottom: 0; }
+  .row .big { font: 600 clamp(54px, 13vw, 140px)/1.05 system-ui, sans-serif; letter-spacing: -.02em; }
+  .row .cap { color: var(--muted); font-size: clamp(14px, 2vw, 22px); text-align: right; }
+  .row:hover, .row:focus-visible { padding-left: 18px; border-color: var(--pink); outline: none; }
+  .row:nth-child(1):hover .big { color: var(--pink); }
+  .row:nth-child(2):hover .big { color: var(--setting); }
+  .row:nth-child(3) .big { color: #8fa8ff; }
+  .row:nth-child(3):hover .big { color: var(--pink); }
+
+  /* Panels */
+  .back { display: inline-block; margin: 18px 0 8px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
+    border-radius: 999px; color: var(--muted); font-size: 14px; transition: border-color .2s, color .2s; }
+  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
+  h2 { margin: 10px 0 6px; font-size: clamp(40px, 8vw, 84px); line-height: 1.05; font-weight: 600; letter-spacing: -.02em; }
+  .lead { margin: 0 0 26px; color: var(--muted); font-size: 16px; max-width: 60ch; }
+  .empty { padding: 26px; border: 1px dashed rgba(143, 160, 214, .4); border-radius: 14px; color: var(--muted); max-width: 520px; }
+
+  /* Block cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .card { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 142px; padding: 16px 18px;
+    border-radius: 14px; background: var(--panel); border: 1px solid rgba(59, 123, 255, .35);
+    backdrop-filter: blur(4px); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .card .n { font: 600 28px/1 var(--mono); color: var(--pink); }
+  .card .t { font-size: 18px; font-weight: 600; }
+  .card .s { font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+  .card .chip { position: absolute; top: 14px; right: 14px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(157, 184, 255, .5); color: var(--setting); }
+  a.card:hover, a.card:focus-visible { transform: translateY(-3px); border-color: var(--pink);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .4), 0 0 24px rgba(255, 79, 163, .2); outline: none; }
+  .card.soon { opacity: .5; border-style: dashed; }
+  .card.soon .chip { border-color: rgba(143, 160, 214, .3); color: var(--muted); }
+  .card.soon .n { color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .view.on { animation: none; } .card, .row { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<main>
+  <header>
+    <div class="kicker">TinyML · keyword spotting</div>
+    <div class="brand">exs</div>
+    <p class="tag">Say a word. The laptop does the rest.</p>
+  </header>
+
+  <nav id="home" class="view" data-view="">
+    <a class="row" href="#what"><span class="big">What.</span><span class="cap">what the project does</span></a>
+    <a class="row" href="#why"><span class="big">Why.</span><span class="cap">why I chose it</span></a>
+    <a class="row" href="#how"><span class="big">How.</span><span class="cap">how it works, in 12 blocks</span></a>
+  </nav>
+
+  <section class="view" data-view="what">
+    <a class="back" href="#">← back</a>
+    <h2>What.</h2>
+    <div class="empty">Coming soon.</div>
+  </section>
+
+  <section class="view" data-view="why">
+    <a class="back" href="#">← back</a>
+    <h2>Why.</h2>
+    <div class="empty">Coming soon.</div>
+  </section>
+
+  <section class="view" data-view="how">
+    <a class="back" href="#">← back</a>
+    <h2>How.</h2>
+    <p class="lead">From sound to action, one block of the model at a time. Tap a block.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   Blocks. Set href to a path when a block page exists; leave it null
+   and the card is shown as "soon". Paths are relative to this file
+   (docs/blocks/index.html).
+------------------------------------------------------------------ */
+const BLOCKS = [
+  { t: 'Imports and settings', s: 'Libraries and constants of the notebook.',        href: './01-imports/' },
+  { t: 'Dataset index',        s: 'From a folder of files to a table: label, speaker.', href: null /* './02-data/' once the page exists */ },
+  { t: 'Load clips',           s: 'Read each WAV, 16 kHz, exactly 1 second.',          href: null },
+  { t: 'Sound to numbers',     s: 'Animation, scenes 1–4: wave, samples, tones.',      href: '../animation/', chip: 'animation' },
+  { t: 'MFCC',                 s: 'Animation, scenes 5–6: mel filters, the 99 × 13 matrix.', href: '../animation/', chip: 'animation' },
+  { t: 'Split and standardize', s: 'Train, validation, test and a held-out speaker.',  href: null },
+  { t: 'CNN model',            s: 'The small network that reads the matrix.',          href: null },
+  { t: 'Training',             s: 'Epochs, learning rate, early stopping.',            href: null },
+  { t: 'Evaluation',           s: 'Accuracy and the confusion matrix.',                href: null },
+  { t: 'int8 quantization',    s: 'Shrink the model to fit the board.',                href: null },
+  { t: 'Prediction and deployment', s: 'From the board over Wi-Fi to the laptop.',     href: null },
+  { t: 'Experiments',          s: 'What changes the accuracy, and by how much.',       href: null },
+];
+
+const grid = document.getElementById('grid');
+BLOCKS.forEach((b, i) => {
+  const el = document.createElement(b.href ? 'a' : 'div');
+  el.className = 'card' + (b.href ? '' : ' soon');
+  if (b.href) el.href = b.href; else el.setAttribute('aria-disabled', 'true');
+  const n = String(i + 1).padStart(2, '0');
+  el.innerHTML = `<span class="n">${n}</span><span class="t"></span><span class="s"></span><span class="chip"></span>`;
+  el.querySelector('.t').textContent = b.t;
+  el.querySelector('.s').textContent = b.s;
+  el.querySelector('.chip').textContent = b.href ? (b.chip || 'open') : 'soon';
+  grid.appendChild(el);
+});
+
+/* ---- view routing by URL hash: #what, #why, #how (back button works) ---- */
+const views = [...document.querySelectorAll('.view')];
+function route() {
+  const h = location.hash.replace('#', '');
+  const name = ['what', 'why', 'how'].includes(h) ? h : '';
+  views.forEach(v => v.classList.toggle('on', v.dataset.view === name));
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route); route();
+
+/* ---- quiet background: drifting dots with faint links ---- */
+const cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W, H, dots = [];
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const n = W < 700 ? 28 : 60;
+  dots = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 }));
+}
+addEventListener('resize', resize); resize();
+function tick() {
+  ctx.clearRect(0, 0, W, H);
+  for (const d of dots) { if (!reduce) { d.x += d.vx; d.y += d.vy; } if (d.x < 0 || d.x > W) d.vx *= -1; if (d.y < 0 || d.y > H) d.vy *= -1; }
+  for (let i = 0; i < dots.length; i++) for (let j = i + 1; j < dots.length; j++) {
+    const a = dots[i], b = dots[j], dist = Math.hypot(a.x - b.x, a.y - b.y);
+    if (dist < 150) { ctx.strokeStyle = `rgba(59,123,255,${0.22 * (1 - dist / 150)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+  }
+  ctx.fillStyle = 'rgba(130,175,255,.55)';
+  for (const d of dots) { ctx.beginPath(); ctx.arc(d.x, d.y, 1.6, 0, 6.283); ctx.fill(); }
+  requestAnimationFrame(tick);
+}
+tick();
+})();
+</script>
+</body>
+</html>
