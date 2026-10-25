@@ -19,7 +19,8 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
   body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  canvas.drag { cursor: grabbing; }
 
   .hud { position: fixed; pointer-events: none; z-index: 2; }
   .hud.tl { top: 28px; left: 32px; }
@@ -72,7 +73,7 @@
   <a class="back" href="../#how">← all blocks</a>
   <div class="kicker">Block 1 of 12</div>
   <h1>Imports and settings</h1>
-  <div class="sub">notebook cell 0 · hover a name</div>
+  <div class="sub">notebook cell 0 · hover a name · drag to turn</div>
 </div>
 <div class="hud tr" id="count"></div>
 <div class="hud bl">
@@ -339,12 +340,34 @@ addEventListener('resize', resize); resize();
 
 const pointer = { x: -1e4, y: -1e4, inside: false, type: 'mouse', tap: false };
 cv.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; });
-cv.addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; pointer.tap = true; });
+// drag to turn the sphere (left / right = yaw, up / down = pitch); a press that barely moves is a tap
+const drag = { on: false, moved: false, id: -1, sx: 0, sy: 0, lx: 0, ly: 0, vx: 0, vy: 0 };
+cv.addEventListener('pointerdown', e => {
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch';
+  Object.assign(drag, { on: true, moved: false, id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, vx: 0, vy: 0 });
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag.on || e.pointerId !== drag.id) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) { drag.moved = true; cv.classList.add('drag'); }
+  if (!drag.moved) return;
+  const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly; drag.lx = e.clientX; drag.ly = e.clientY;
+  yaw -= dx * 0.008; pitch = Math.max(-1.2, Math.min(1.2, pitch + dy * 0.008));
+  drag.vx = dx * 0.008; drag.vy = dy * 0.008; // last step, kept as the release speed
+  drag.stamp = performance.now();
+});
+const endDrag = e => {
+  if (!drag.on || e.pointerId !== drag.id) return;
+  if (!drag.moved) pointer.tap = true;
+  else if (performance.now() - (drag.stamp || 0) < 80) spin = -drag.vx * 60; // a flick keeps turning, then slows down
+  drag.on = false; cv.classList.remove('drag');
+};
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') pointer.inside = false; });
 
 const pr = pts.map(() => ({ x: 0, y: 0, z: 0, s: 1, d: 0 }));
 const nodeState = NODES.map(() => ({ pop: 0, hw: 60, fs: 16 }));
-let yaw = 0.6, tiltX = 0, tiltY = 0, hold = 0, intro = 0, last = 0, activeId = null, shownId = null;
+let yaw = 0.6, pitch = 0, spin = 0, tiltX = 0, tiltY = 0, hold = 0, intro = 0, last = 0, activeId = null, shownId = null;
 
 function pick() {
   let best = null, bz = -1e9;
@@ -390,18 +413,19 @@ function frame(ts) {
   const e = 1 - Math.pow(1 - intro, 3);
 
   // hover logic
-  if (pointer.type === 'mouse') activeId = pointer.inside ? pick() : null;
+  if (drag.on && drag.moved) activeId = null; // no card while turning
+  else if (pointer.type === 'mouse') activeId = pointer.inside ? pick() : null;
   else if (pointer.tap) { activeId = pick(); }
   pointer.tap = false;
   if (activeId !== shownId) { shownId = activeId; setCard(activeId); }
   hold += ((activeId !== null ? 1 : 0) - hold) * Math.min(1, dt * 6);
 
   // camera
-  yaw += (reduce ? 0.02 : 0.13) * (1 - hold) * dt;
-  const tx = pointer.inside && pointer.type === 'mouse' ? (pointer.x / W - 0.5) * 0.35 : 0;
-  const ty = pointer.inside && pointer.type === 'mouse' ? (pointer.y / H - 0.5) * 0.3 : 0;
+  if (!(drag.on && drag.moved)) { yaw += ((reduce ? 0.02 : 0.13) * (1 - hold) + spin) * dt; spin *= Math.pow(0.04, dt); pitch *= Math.pow(0.7, dt); } // flick inertia fades; the tilt eases back
+  const tx = pointer.inside && pointer.type === 'mouse' && !drag.on ? (pointer.x / W - 0.5) * 0.35 : 0;
+  const ty = pointer.inside && pointer.type === 'mouse' && !drag.on ? (pointer.y / H - 0.5) * 0.3 : 0;
   tiltX += (tx - tiltX) * Math.min(1, dt * 2); tiltY += (ty - tiltY) * Math.min(1, dt * 2);
-  const Y = yaw + tiltX, P = 0.3 + tiltY + 0.05 * Math.sin(t * 0.25);
+  const Y = yaw + tiltX, P = 0.3 + pitch + tiltY + 0.05 * Math.sin(t * 0.25);
   const cy = Math.cos(Y), sy = Math.sin(Y), cp = Math.cos(P), sp = Math.sin(P);
   const Re = R * (0.7 + 0.3 * e), D = Re * 3.2, cx0 = W / 2, cy0 = H / 2 + 6;
 
