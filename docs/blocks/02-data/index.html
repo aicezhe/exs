@@ -259,6 +259,7 @@ function layout() {
   L.xtCol = (tw - L.xtLab) / colsN;
   L.xtRow = Math.min(34, L.th / (CLASSES.length + 2));
   L.xth = L.xtRow * (CLASSES.length + 2);
+  L.shift = Math.max(0, (zt - 12 - (L.tt + L.xth)) * .4); // the last step sits lower: the crosstab is shorter than the table
   L.counter = narrow ? { x: W - pad, y: ctop + 8, align: 'right' } : { x: tx0 + tw + 24, y: tableTop + L.rowH * 1.5, align: 'left' };
 
   if (firstLayout) { firstLayout = false; initPositions(); pieces.forEach(p => { const t = target(p); p.x = p.fx = t.x; p.y = p.fy = t.y; p.a = p.fa = t.a; p.t0 = -1e9; p.dur = 0; p.u = 1; }); }
@@ -299,7 +300,7 @@ function target(p) {
     return { x: p.type === 'path' ? L.pathX : p.type === 'label' ? L.labX : L.spkX, y, a: 1 };
   }
   const c = SPEAKERS.indexOf(it.parsed.speaker), r = CLASSES.indexOf(it.parsed.label);
-  return { x: L.tx0 + L.xtLab + L.xtCol * (c + .5) - w / 2, y: L.tt + L.xtRow * (r + 1.5), a: 0 };
+  return { x: L.tx0 + L.xtLab + L.xtCol * (c + .5) - w / 2, y: L.tt + L.shift + L.xtRow * (r + 1.5), a: 0 };
 }
 
 /* ------------------------------------------------------------------
@@ -424,6 +425,7 @@ function drawTable() {
   const fa = A.frame, tbl = A.tbl, xt = A.xt;
   if (fa < .01) return;
   const h = mix(L.th, L.xth, xt);
+  ctx.save(); ctx.translate(0, L.shift * xt); // the whole block glides down with the crosstab
   ctx.globalAlpha = fa; rr(L.tx0 - 6, L.tt - 4, L.tw + 12, h + 8, 12);
   ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(59,123,255,.55)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
 
@@ -473,6 +475,7 @@ function drawTable() {
   const nW = ctx.measureText(String(arrived)).width, lW = ctx.measureText('Clips: ').width;
   const x = cnt.align === 'right' ? cnt.x - nW - lW : cnt.x;
   drawLabel('Clips: ', x, cnt.y, fa, '#8fa0d6', fs); drawLabel(String(arrived), x + lW, cnt.y, fa, '#e8eeff', fs * 1.1);
+  ctx.restore();
 }
 
 function drawZone() {
