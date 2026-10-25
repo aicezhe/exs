@@ -25,6 +25,11 @@
   .hud.tl { top: 28px; left: 32px; }
   .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
   .hud.tr { top: 30px; right: 32px; font-size: 13px; color: var(--muted); text-align: right; }
+  /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
+    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: border-color .2s, color .2s; }
+  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
   .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
   h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
   .sub { font-size: 14px; color: var(--muted); }
@@ -55,7 +60,7 @@
   @media (max-width: 700px) {
     #card { left: 16px !important; right: 16px; top: auto !important; bottom: 16px; width: auto; }
     .hud.tl { left: 16px; top: 18px; }
-    .hud.bl { left: 16px; bottom: auto; top: 96px; flex-direction: column; gap: 6px; }
+    .hud.bl { left: 16px; bottom: auto; top: 152px; flex-direction: column; gap: 6px; }
     .hud.tr { display: none; }
   }
 </style>
@@ -64,7 +69,8 @@
 <canvas id="c"></canvas>
 
 <div class="hud tl">
-  <div class="kicker">Block 1 of 14</div>
+  <a class="back" href="../#how">← all blocks</a>
+  <div class="kicker">Block 1 of 12</div>
   <h1>Imports and settings</h1>
   <div class="sub">notebook cell 0 · hover a name</div>
 </div>
