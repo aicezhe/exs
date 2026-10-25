@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 1 · Imports</title>
+<style>
+  :root {
+    --bg0: #030720;
+    --bg1: #0a1650;
+    --link: #3b7bff;
+    --pink: #ff4fa3;
+    --setting: #9db8ff;
+    --ink: #e8eeff;
+    --muted: #8fa0d6;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .hud { position: fixed; pointer-events: none; z-index: 2; }
+  .hud.tl { top: 28px; left: 32px; }
+  .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
+  .hud.tr { top: 30px; right: 32px; font-size: 13px; color: var(--muted); text-align: right; }
+  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .sub { font-size: 14px; color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+  .dot.imp { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
+  .dot.set { background: var(--setting); box-shadow: 0 0 8px var(--setting); }
+  .line { display: inline-block; width: 18px; height: 2px; margin-right: 7px; vertical-align: 3px; background: var(--link); }
+
+  #card {
+    position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
+    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    backdrop-filter: blur(6px); pointer-events: none;
+    opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
+  }
+  #card.on { opacity: 1; transform: none; }
+  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
+  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  #card.setting .tag { color: var(--setting); }
+  #card h2 { margin: 6px 0 10px; font: 600 24px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
+  #card.setting h2 { color: var(--setting); }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
+    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.5; }
+  #card .lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  #card .note { padding: 8px 10px; border-radius: 8px; background: rgba(255, 79, 163, .12); color: #ffc4e1; font-size: 13px; }
+  #card .src { margin-top: 10px; font-size: 12px; color: var(--muted); word-break: break-word; }
+  @media (max-width: 700px) {
+    #card { left: 16px !important; right: 16px; top: auto !important; bottom: 16px; width: auto; }
+    .hud.tl { left: 16px; top: 18px; }
+    .hud.bl { left: 16px; bottom: auto; top: 96px; flex-direction: column; gap: 6px; }
+    .hud.tr { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud tl">
+  <div class="kicker">Block 1 of 14</div>
+  <h1>Imports and settings</h1>
+  <div class="sub">notebook cell 0 · hover a name</div>
+</div>
+<div class="hud tr" id="count"></div>
+<div class="hud bl">
+  <span><i class="dot imp"></i>import</span>
+  <span><i class="dot set"></i>setting</span>
+  <span><i class="line"></i>link</span>
+</div>
+
+<div id="card" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   DATA. Edit the text here. kind: 'import' (pink) or 'setting' (pale blue).
+   Set SHOW_SETTINGS to false to keep only imports.
+------------------------------------------------------------------ */
+const SHOW_SETTINGS = true;
+
+const NODES = [
+  // ---- imports -----------------------------------------------------
+  { id: 'os', label: 'os', kind: 'import', from: 'Python standard library',
+    line: 'import os',
+    what: 'Access to operating-system functions: files, directories, environment variables.',
+    used: 'File-system work: creates the results/ and exported/ folders before plots and the model are saved.',
+    src: 'docs.python.org/3/library/os.html' },
+  { id: 'random', label: 'random', kind: 'import', from: 'Python standard library',
+    line: 'import random',
+    what: 'Python\'s built-in random number generator.',
+    used: 'random.seed(SEED) fixes the randomness, so clip shuffling is identical on every run.',
+    src: 'docs.python.org/3/library/random.html' },
+  { id: 'Path', label: 'Path', kind: 'import', from: 'pathlib, Python standard library',
+    line: 'from pathlib import Path',
+    what: 'File paths as objects. Joined with /, so the same code runs on Mac and Windows.',
+    used: 'DATA_DIR, RESULTS_DIR, EXPORT_DIR. Example: DATA_DIR / "telegram.anna.01.wav".',
+    src: 'docs.python.org/3/library/pathlib.html' },
+  { id: 'numpy', label: 'numpy', kind: 'import', from: 'third-party library',
+    line: 'import numpy as np',
+    what: 'Fast numeric arrays. librosa and TensorFlow take and return exactly these.',
+    used: 'A clip = an array of 16 000 numbers. MFCC = a 99 × 13 matrix. np.stack builds X of shape (N, 99, 13). Mean and std for standardization.',
+    src: 'numpy.org/doc/stable' },
+  { id: 'pandas', label: 'pandas', kind: 'import', from: 'third-party library',
+    line: 'import pandas as pd',
+    what: 'Tables. One row = one recording.',
+    used: 'Table df with columns path, label, speaker. pd.crosstab shows how many recordings of each class each speaker has. It is used to choose the hold-out speaker.',
+    src: 'pandas.pydata.org/docs' },
+  { id: 'pyplot', label: 'matplotlib.pyplot', kind: 'import', from: 'third-party library',
+    line: 'import matplotlib.pyplot as plt',
+    what: 'Plotting.',
+    used: 'MFCC images, training curves (loss and accuracy), the confusion matrix.',
+    note: 'Imported twice in cell 0. Keep one line.',
+    src: 'matplotlib.org/stable' },
+  { id: 'librosa', label: 'librosa', kind: 'import', from: 'third-party library',
+    line: 'import librosa',
+    what: 'Audio analysis library: reading, resampling, features.',
+    used: 'librosa.load reads a WAV and resamples it to 16 kHz. librosa.feature.mfcc computes MFCC (13 coefficients, 32 mel filters). Blocks 3–5.',
+    src: 'librosa.org/doc/latest' },
+  { id: 'soundfile', label: 'soundfile', kind: 'import', from: 'third-party library',
+    line: 'import soundfile as sf',
+    what: 'Reads and writes audio files (WAV, FLAC) via libsndfile. librosa uses it internally.',
+    used: 'sf.write saves clips trimmed to exactly 1 second.',
+    src: 'python-soundfile.readthedocs.io' },
+  { id: 'tensorflow', label: 'tensorflow', kind: 'import', from: 'third-party library',
+    line: 'import tensorflow as tf',
+    what: 'Google\'s neural-network framework. Computes gradients and trains the model.',
+    used: 'tf.random.set_seed(SEED). CNN training. tf.lite.TFLiteConverter converts the model to int8 TFLite for the board.',
+    src: 'tensorflow.org/api_docs/python/tf' },
+  { id: 'keras', label: 'keras', kind: 'import', from: 'part of TensorFlow',
+    line: 'from tensorflow import keras',
+    what: 'High-level interface: the network is assembled from ready-made layers, no manual math.',
+    used: 'keras.Sequential, the Adam optimizer, EarlyStopping, model.fit.',
+    src: 'keras.io/api' },
+  { id: 'layers', label: 'layers', kind: 'import', from: 'part of TensorFlow',
+    line: 'from tensorflow.keras import layers',
+    what: 'Catalog of neural-network layers.',
+    used: 'Conv2D(8) → MaxPool → Conv2D(16) → MaxPool → Dropout(0.25) → GlobalAveragePooling2D → Dense(6, softmax).',
+    src: 'keras.io/api/layers' },
+  { id: 'tts', label: 'train_test_split', kind: 'import', from: 'scikit-learn',
+    line: 'from sklearn.model_selection import train_test_split',
+    what: 'Randomly splits data into parts, preserving the share of each class (stratify).',
+    used: 'Train / val / test split (test_size 0.15, stratified by class, random_state = SEED).',
+    src: 'scikit-learn.org, model_selection.train_test_split' },
+  { id: 'cm', label: 'confusion_matrix', kind: 'import', from: 'scikit-learn',
+    line: 'from sklearn.metrics import confusion_matrix',
+    what: 'A table: how many times class A was recognized as class B.',
+    used: 'After training, shows which words the model confuses with each other.',
+    note: 'Imported twice in cell 0. Keep one line.',
+    src: 'scikit-learn.org, metrics.confusion_matrix' },
+  { id: 'cmd', label: 'ConfusionMatrixDisplay', kind: 'import', from: 'scikit-learn',
+    line: 'from sklearn.metrics import ConfusionMatrixDisplay',
+    what: 'Draws the confusion matrix as a colored image.',
+    used: 'A ready-made figure for the results and the project defense.',
+    note: 'Imported twice in cell 0. Keep one line.',
+    src: 'scikit-learn.org, metrics.ConfusionMatrixDisplay' },
+  { id: 'cr', label: 'classification_report', kind: 'import', from: 'scikit-learn',
+    line: 'from sklearn.metrics import classification_report',
+    what: 'Prints precision, recall and F1 for each class.',
+    used: 'Numbers for the results table and for comparing experiments.',
+    note: 'Imported twice in cell 0. Keep one line.',
+    src: 'scikit-learn.org, metrics.classification_report' },
+
+  // ---- settings ----------------------------------------------------
+  { id: 'SEED', label: 'SEED = 42', kind: 'setting', from: 'our choice',
+    line: 'SEED = 42',
+    what: 'Initial value for the random generators (random, NumPy, TensorFlow).',
+    used: 'The same code gives the same numbers on every run; otherwise experiments cannot be compared fairly. 42 is a conventional in-joke value.',
+    src: 'our choice' },
+  { id: 'DATA_DIR', label: 'DATA_DIR', kind: 'setting', from: 'our choice',
+    line: 'DATA_DIR = Path("data")',
+    what: 'Folder with recordings named label.speaker.number.wav.',
+    used: 'Block 2 builds the df table from it. This folder is not committed to git.',
+    src: 'our choice' },
+  { id: 'RESULTS_DIR', label: 'RESULTS_DIR', kind: 'setting', from: 'our choice',
+    line: 'RESULTS_DIR = Path("results")',
+    what: 'Folder for plots and result tables.',
+    used: 'Training curves, the confusion matrix and results.csv are written here.',
+    src: 'our choice' },
+  { id: 'EXPORT_DIR', label: 'EXPORT_DIR', kind: 'setting', from: 'our choice',
+    line: 'EXPORT_DIR = Path("exported")',
+    what: 'Folder for everything that goes to the board.',
+    used: 'exs_int8.tflite and norm.npz (mean and std for standardization).',
+    src: 'our choice' },
+  { id: 'SAMPLE_RATE', label: 'SAMPLE_RATE = 16000', kind: 'setting', from: 'standard for speech',
+    line: 'SAMPLE_RATE = 16000  # Hz',
+    what: 'How many times per second the sound is measured.',
+    used: 'Speech lies below 8 kHz, so Nyquist requires at least 16 000 samples per second. Edge Impulse is configured the same way.',
+    src: 'Nyquist–Shannon sampling theorem; Edge Impulse docs' },
+  { id: 'CLIP_SECONDS', label: 'CLIP_SECONDS = 1.0', kind: 'setting', from: 'our choice',
+    line: 'CLIP_SECONDS = 1.0',
+    what: 'Length of one clip.',
+    used: 'A command fits in 1 s. 16 000 × 1.0 = 16 000 numbers per clip.',
+    src: 'our choice' },
+  { id: 'FRAME_LENGTH', label: 'FRAME_LENGTH = 0.02', kind: 'setting', from: 'same as in Edge Impulse',
+    line: 'FRAME_LENGTH = 0.02  # 20 ms',
+    what: 'Frame length: 20 ms.',
+    used: '16 000 × 0.02 = 320 samples. A short frame in which the sound barely changes.',
+    note: 'The notebook spells this variable FRAME_LENGHT. Fix it everywhere.',
+    src: 'Edge Impulse docs, MFCC block' },
+  { id: 'FRAME_STRIDE', label: 'FRAME_STRIDE = 0.01', kind: 'setting', from: 'our choice (open question)',
+    line: 'FRAME_STRIDE = 0.01  # 10 ms',
+    what: 'Step between frames: 10 ms = 160 samples, so frames overlap.',
+    used: 'Frame count: 1 + (16000 − 320) // 160 = 99. Edge Impulse defaults to 0.02; we will decide by experiment.',
+    src: 'calculation; Edge Impulse docs' },
+  { id: 'N_MFCC', label: 'N_MFCC = 13', kind: 'setting', from: 'standard for speech',
+    line: 'N_MFCC = 13',
+    what: 'How many coefficients describe one frame.',
+    used: 'The resulting matrix is 99 × 13. The first coefficients carry the overall spectral shape, the rest carry detail.',
+    src: 'librosa.feature.mfcc; Edge Impulse docs' },
+  { id: 'N_MELS', label: 'N_MELS = 32', kind: 'setting', from: 'same as in Edge Impulse',
+    line: 'N_MELS = 32',
+    what: 'How many mel filters (frequency groups) before the DCT.',
+    used: 'Of the 32 values per frame, the first 13 coefficients are kept after the DCT.',
+    src: 'Edge Impulse docs, MFCC block' },
+  { id: 'CLASSES', label: 'CLASSES', kind: 'setting', from: 'our choice',
+    line: 'CLASSES = ["telegram", "elly", "slack", "focus", "noise", "unknown"]',
+    what: 'Six classes: four commands, noise and unknown.',
+    used: 'The order defines the network output indices: telegram = 0, elly = 1, and so on. The firmware uses the same order.',
+    src: 'our choice' },
+  { id: 'EPOCHS', label: 'EPOCHS = 100', kind: 'setting', from: 'our choice',
+    line: 'EPOCHS = 100',
+    what: 'Maximum number of passes over the training data.',
+    used: 'EarlyStopping (val_loss, patience 15) stops training earlier, once quality stops improving.',
+    src: 'our choice' },
+  { id: 'LEARNING_RATE', label: 'LEARNING_RATE = 0.005', kind: 'setting', from: 'our choice',
+    line: 'LEARNING_RATE = 0.005',
+    what: 'Step size of the Adam optimizer.',
+    used: 'Too large and training oscillates; too small and it is very slow. The value can be tuned by experiment.',
+    src: 'keras.io/api/optimizers/adam' },
+  { id: 'BATCH_SIZE', label: 'BATCH_SIZE = 32', kind: 'setting', from: 'our choice',
+    line: 'BATCH_SIZE = 32',
+    what: 'How many clips the network sees before one weight update.',
+    used: 'A trade-off between speed and stability. 32 is a typical value for small datasets.',
+    src: 'our choice' },
+].filter(n => SHOW_SETTINGS || n.kind === 'import');
+
+// Semantic links (shown as brighter blue lines)
+const LINKS = [
+  ['numpy','pandas'], ['numpy','librosa'], ['librosa','soundfile'], ['numpy','pyplot'],
+  ['tensorflow','keras'], ['keras','layers'], ['tensorflow','numpy'], ['tts','pandas'],
+  ['cm','cmd'], ['cm','cr'], ['cm','pyplot'], ['cmd','pyplot'],
+  ['os','Path'], ['random','SEED'], ['numpy','SEED'], ['tensorflow','SEED'], ['tts','SEED'],
+  ['Path','DATA_DIR'], ['Path','RESULTS_DIR'], ['Path','EXPORT_DIR'],
+  ['SAMPLE_RATE','librosa'], ['SAMPLE_RATE','CLIP_SECONDS'], ['SAMPLE_RATE','FRAME_LENGTH'],
+  ['FRAME_LENGTH','FRAME_STRIDE'], ['N_MFCC','N_MELS'], ['N_MFCC','librosa'], ['N_MELS','librosa'],
+  ['CLASSES','layers'], ['CLASSES','tts'], ['EPOCHS','keras'], ['LEARNING_RATE','keras'], ['BATCH_SIZE','keras'],
+  ['DATA_DIR','pandas'], ['EXPORT_DIR','tensorflow'], ['RESULTS_DIR','pyplot'],
+].filter(([a, b]) => NODES.some(n => n.id === a) && NODES.some(n => n.id === b));
+
+/* ------------------------------------------------------------------
+   Layout: nodes sit on a sphere. Related nodes are placed close
+   together by a small deterministic annealing pass.
+------------------------------------------------------------------ */
+const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rnd = rng(7);
+const N = NODES.length;
+const idx = Object.fromEntries(NODES.map((n, i) => [n.id, i]));
+const linkIdx = LINKS.map(([a, b]) => [idx[a], idx[b]]);
+
+function fib(i, n) {
+  const y = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(1 - y * y), th = Math.PI * (1 + Math.sqrt(5)) * i;
+  return [Math.cos(th) * r, y, Math.sin(th) * r];
+}
+const slots = Array.from({ length: N }, (_, i) => fib(i, N));
+const perm = Array.from({ length: N }, (_, i) => i);
+for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+const d3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const cost = () => linkIdx.reduce((c, [a, b]) => c + d3(slots[perm[a]], slots[perm[b]]), 0);
+let cur = cost();
+for (let it = 0; it < 9000; it++) {
+  const T = 0.6 * (1 - it / 9000) + 0.01;
+  const i = Math.floor(rnd() * N), j = Math.floor(rnd() * N);
+  if (i === j) continue;
+  [perm[i], perm[j]] = [perm[j], perm[i]];
+  const c = cost();
+  if (c < cur || rnd() < Math.exp((cur - c) / T)) cur = c; else [perm[i], perm[j]] = [perm[j], perm[i]];
+}
+
+// points: first N are labelled nodes, the rest is decorative dust
+const pts = NODES.map((n, k) => ({ x: slots[perm[k]][0], y: slots[perm[k]][1], z: slots[perm[k]][2], node: k }));
+const DUST = 150;
+for (let i = 0; i < DUST; i++) {
+  const u = rnd() * 2 - 1, th = rnd() * Math.PI * 2, r = Math.sqrt(1 - u * u), rad = 0.5 + rnd() * 0.65;
+  pts.push({ x: Math.cos(th) * r * rad, y: u * rad, z: Math.sin(th) * r * rad, node: -1, ph: rnd() * 6.28 });
+}
+
+// edges: faint lattice (2 nearest neighbours) + semantic
+const edges = [], seen = new Set();
+const addEdge = (a, b, sem) => { const key = a < b ? a + '_' + b : b + '_' + a; if (seen.has(key) && !sem) return; seen.add(key); edges.push({ a, b, sem }); };
+pts.forEach((p, i) => {
+  const ds = pts.map((q, j) => [j, (p.x - q.x) ** 2 + (p.y - q.y) ** 2 + (p.z - q.z) ** 2]).filter(([j]) => j !== i).sort((u, v) => u[1] - v[1]);
+  addEdge(i, ds[0][0], false); addEdge(i, ds[1][0], false);
+});
+linkIdx.forEach(([a, b]) => addEdge(a, b, true));
+const semEdges = edges.filter(e => e.sem);
+const adj = NODES.map(() => new Set());
+linkIdx.forEach(([a, b]) => { adj[a].add(b); adj[b].add(a); });
+const pulses = Array.from({ length: 16 }, () => ({ e: Math.floor(rnd() * semEdges.length), t: rnd(), v: 0.1 + rnd() * 0.2 }));
+
+/* ------------------------------------------------------------------
+   Rendering
+------------------------------------------------------------------ */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const card = document.getElementById('card');
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W = 0, H = 0, R = 300, STRETCH = 1;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  R = Math.min(W, H) * 0.36;
+  STRETCH = W < 700 ? 1 : Math.max(1, Math.min(1.8, W / H * 0.85));
+}
+addEventListener('resize', resize); resize();
+
+const pointer = { x: -1e4, y: -1e4, inside: false, type: 'mouse', tap: false };
+cv.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; });
+cv.addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; pointer.tap = true; });
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') pointer.inside = false; });
+
+const pr = pts.map(() => ({ x: 0, y: 0, z: 0, s: 1, d: 0 }));
+const nodeState = NODES.map(() => ({ pop: 0, hw: 60, fs: 16 }));
+let yaw = 0.6, tiltX = 0, tiltY = 0, hold = 0, intro = 0, last = 0, activeId = null, shownId = null;
+
+function pick() {
+  let best = null, bz = -1e9;
+  for (let k = 0; k < N; k++) {
+    const p = pr[k], st = nodeState[k];
+    if (pointer.x >= p.x - 12 && pointer.x <= p.x + 14 + st.hw && Math.abs(pointer.y - p.y) <= Math.max(12, st.fs * 0.75) && p.z > bz) { bz = p.z; best = k; }
+  }
+  return best;
+}
+
+function setCard(k) {
+  if (k === null) { card.classList.remove('on'); return; }
+  const n = NODES[k];
+  card.className = (n.kind === 'setting' ? 'setting ' : '') + 'on';
+  card.innerHTML =
+    `<div class="tag">${n.kind === 'import' ? 'import' : 'setting'} · ${n.from}</div>` +
+    `<h2>${n.label}</h2><code>${n.line}</code>` +
+    `<p>${n.what}</p>` +
+    `<div class="lbl">In our project</div><p>${n.used}</p>` +
+    (n.note ? `<p class="note">${n.note}</p>` : '') +
+    `<div class="src">Source: ${n.src}</div>`;
+}
+
+function placeCard(k) {
+  if (W < 700) { card.style.left = ''; card.style.top = ''; return; }
+  const p = pr[k], st = nodeState[k], cw = card.offsetWidth, ch = card.offsetHeight;
+  let left = p.x + 16 + st.hw + 26;
+  if (left + cw > W - 16) left = p.x - cw - 30;
+  left = Math.max(16, Math.min(W - cw - 16, left));
+  const top = Math.max(16, Math.min(H - ch - 16, p.y - 40));
+  card.style.left = left + 'px'; card.style.top = top + 'px';
+}
+
+function pill(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function frame(ts) {
+  const t = ts / 1000, dt = Math.min(0.05, last ? t - last : 0.016); last = t;
+  intro = Math.min(1, intro + dt / 1.8);
+  const e = 1 - Math.pow(1 - intro, 3);
+
+  // hover logic
+  if (pointer.type === 'mouse') activeId = pointer.inside ? pick() : null;
+  else if (pointer.tap) { activeId = pick(); }
+  pointer.tap = false;
+  if (activeId !== shownId) { shownId = activeId; setCard(activeId); }
+  hold += ((activeId !== null ? 1 : 0) - hold) * Math.min(1, dt * 6);
+
+  // camera
+  yaw += (reduce ? 0.02 : 0.13) * (1 - hold) * dt;
+  const tx = pointer.inside && pointer.type === 'mouse' ? (pointer.x / W - 0.5) * 0.35 : 0;
+  const ty = pointer.inside && pointer.type === 'mouse' ? (pointer.y / H - 0.5) * 0.3 : 0;
+  tiltX += (tx - tiltX) * Math.min(1, dt * 2); tiltY += (ty - tiltY) * Math.min(1, dt * 2);
+  const Y = yaw + tiltX, P = 0.3 + tiltY + 0.05 * Math.sin(t * 0.25);
+  const cy = Math.cos(Y), sy = Math.sin(Y), cp = Math.cos(P), sp = Math.sin(P);
+  const Re = R * (0.7 + 0.3 * e), D = Re * 3.2, cx0 = W / 2, cy0 = H / 2 + 6;
+
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i], o = pr[i];
+    const x1 = p.x * cy + p.z * sy, z1 = -p.x * sy + p.z * cy;
+    const y2 = p.y * cp - z1 * sp, z2 = p.y * sp + z1 * cp;
+    const s = D / (D - z2 * Re);
+    o.x = cx0 + x1 * Re * STRETCH * s; o.y = cy0 + y2 * Re * s; o.z = z2; o.s = s;
+    o.d = Math.max(0, Math.min(1, (z2 + 1) / 2));
+  }
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineCap = 'round';
+  const act = activeId, nb = act !== null ? adj[act] : null;
+
+  // edges
+  for (const ed of edges) {
+    const a = pr[ed.a], b = pr[ed.b], d = (a.d + b.d) / 2;
+    let alpha = ed.sem ? 0.22 + 0.5 * d : 0.05 + 0.22 * d, col = '59,123,255', w = ed.sem ? 1.3 : 0.8;
+    if (act !== null) {
+      const touches = ed.sem && (ed.a === act || ed.b === act);
+      if (touches) { col = '255,110,185'; alpha = 0.95; w = 2.4; } else alpha *= 0.3;
+    }
+    ctx.strokeStyle = `rgba(${col},${(alpha * e).toFixed(3)})`;
+    ctx.lineWidth = w * (0.6 + 0.6 * d);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
+  // data pulses travelling along semantic links
+  for (const pl of pulses) {
+    pl.t += pl.v * dt * (1 - 0.8 * hold);
+    if (pl.t > 1) { pl.t = 0; pl.e = Math.floor(rnd() * semEdges.length); }
+    const ed = semEdges[pl.e], a = pr[ed.a], b = pr[ed.b];
+    ctx.fillStyle = `rgba(160,200,255,${(0.35 + 0.6 * (a.d + b.d) / 2) * e})`;
+    ctx.beginPath(); ctx.arc(a.x + (b.x - a.x) * pl.t, a.y + (b.y - a.y) * pl.t, 2.2, 0, 6.283); ctx.fill();
+  }
+
+  // dust
+  for (let i = N; i < pts.length; i++) {
+    const o = pr[i], tw = 0.55 + 0.45 * Math.sin(t * 1.4 + pts[i].ph);
+    ctx.fillStyle = `rgba(130,175,255,${((0.12 + 0.5 * o.d) * tw * e * (act !== null ? 0.5 : 1)).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(o.x, o.y, 1.3 * o.s, 0, 6.283); ctx.fill();
+  }
+
+  // labelled nodes, back to front, active node last
+  const order = [...Array(N).keys()].sort((a, b) => (a === act) - (b === act) || pr[a].z - pr[b].z);
+  for (const k of order) {
+    const n = NODES[k], o = pr[k], st = nodeState[k], isImp = n.kind === 'import';
+    st.pop += ((k === act ? 1 : 0) - st.pop) * Math.min(1, dt * 10);
+    const near = act === null || k === act || nb.has(k);
+    let alpha = (0.28 + 0.72 * o.d) * (near ? 1 : 0.28) * e;
+    const fs = (isImp ? 17 : 13) * o.s * (1 + 0.5 * st.pop);
+    const col = isImp ? '#ff4fa3' : '#9db8ff';
+    ctx.font = `${isImp ? 600 : 500} ${fs.toFixed(1)}px ${MONO}`;
+    const tw = ctx.measureText(n.label).width;
+    st.hw = tw + 8; st.fs = fs;
+
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    if (st.pop > 0.02) {
+      ctx.fillStyle = `rgba(4,10,42,${0.9 * st.pop})`;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      pill(o.x - 12, o.y - fs * 0.85, tw + 8 + 24, fs * 1.7, 10); ctx.fill(); ctx.stroke();
+    }
+    ctx.shadowColor = col; ctx.shadowBlur = (6 + 22 * st.pop) * o.d;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(o.x, o.y, (2.6 + 2.4 * st.pop) * o.s, 0, 6.283); ctx.fill();
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.label, o.x + 8, o.y + 1);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  if (act !== null) placeCard(act);
+  requestAnimationFrame(frame);
+}
+
+// counters
+const nImp = NODES.filter(n => n.kind === 'import').length, nSet = NODES.length - nImp;
+document.getElementById('count').innerHTML = `${nImp} imports` + (nSet ? ` · ${nSet} settings` : '') + `<br>99 × 13 · 6 classes`;
+
+// debug hook used by the test script
+window.__exs = { nodes: () => NODES.map((n, k) => ({ label: n.label, x: pr[k].x, y: pr[k].y, hw: nodeState[k].hw, z: pr[k].z })) };
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
