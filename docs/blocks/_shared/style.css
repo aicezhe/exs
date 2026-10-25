@@ -1,0 +1,67 @@
+/* Shared by the animation blocks (04-sound, 05-mfcc): colour tokens read by engine.js, the page header and the scene controls */
+:root{
+  --bg:#090B24;
+  --surface:#0D1031;
+  --ink:#FFFFFF;
+  --muted:#AEB4E8;
+  --line:#272D66;
+  --accent:#FFFFFF;
+  --signal:#FF4FA8;
+  --cyan:#4FD6FF;
+  --heat-lo:#12163F;
+  --heat-mid:#FF4FA8;
+  --heat-hi:#FFFFFF;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --label:Orbitron,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--label)}
+
+/* the page: a header row, then the canvas takes the rest */
+body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.stage{flex:1;min-height:0;position:relative}
+canvas{display:block;width:100%;height:100%;touch-action:none} /* touch drags and pinches go to the scenes */
+
+/* header: the way back, the block name, the scene navigation */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px;position:relative;z-index:2}
+.back{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);font:600 13px var(--mono);text-decoration:none;flex:none}
+.back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.back:hover{border-color:var(--signal)}
+.meta{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.kicker{font:600 11px/1 var(--label);letter-spacing:.2em;text-transform:uppercase;color:var(--signal);white-space:nowrap}
+.meta h1{margin:0;font:600 clamp(15px,2.2vw,20px)/1.1 var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav{display:flex;align-items:center;gap:8px;flex:none}
+.dots{display:flex;gap:6px;margin-right:6px}
+.dot{width:10px;height:10px;padding:0;border-radius:50%;border:1px solid var(--muted);background:transparent;cursor:pointer}
+.dot[aria-current="true"]{background:var(--signal);border-color:var(--signal);box-shadow:0 0 8px var(--signal)}
+.dot:hover{border-color:var(--signal)}
+.onward{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--signal);background:var(--surface);
+  color:var(--ink);font:600 13px var(--label);text-decoration:none;white-space:nowrap;box-shadow:0 0 14px rgba(255,79,168,.35)}
+.onward[hidden]{display:none}
+.onward:hover{background:rgba(255,79,168,.14)}
+@media (max-width:639px){
+  .back span{display:none}.back{width:40px;padding:0;justify-content:center}
+  .nav{flex-basis:100%;justify-content:flex-end}
+  .top{padding:10px 16px}
+}
+
+/* buttons: ← → in the header, the mode / play / tones switches at the bottom right */
+.controls{display:contents}
+.controls #mode,.controls #play,.controls #tones{position:fixed;bottom:16px;right:16px}
+.controls #tones{right:64px} /* "what the wave is made of": left of the bottom-right button, pink while on */
+button.sq,.controls button{width:40px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  font:600 15px var(--mono);cursor:pointer;display:grid;place-items:center;padding:0}
+button.sq:hover,.controls button:hover{border-color:var(--signal)}
+button.sq:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.controls svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.controls #mode[aria-pressed="true"],.controls #tones[aria-pressed="true"]{color:var(--signal);border-color:var(--signal)}
+.controls button[hidden]{display:none}
+
+/* scene 1: one transparent button over each graph segment (t, a, m) */
+.seg{position:fixed;margin:0;padding:0;border:0;border-radius:2px;background:transparent;cursor:pointer}
+.seg:hover{background:rgba(255,255,255,.05)}
+.seg:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.seg[hidden]{display:none}
