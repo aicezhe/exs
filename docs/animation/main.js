@@ -1,5 +1,5 @@
 (() => {
-/* ---------- the word "telegram" (scenes 1 and 2), from tools/tones_stft.json ---------- */
+/* ---------- the word "telegram", recorded: tools/word_data.js (made by tools/make_tones.py) ---------- */
 // When each sound happens in the 1-second recording, in seconds: start and end. Adjust by hand.
 const TIMES = { t: [0.18, 0.25], a: [0.52, 0.66], m: [0.67, 0.80] };
 const WORD_SLOW = 10;  // the 1 s word plays over 10 s on screen
@@ -63,12 +63,18 @@ const TXT = {
 let lang = "en";
 try { const s = localStorage.getItem("exs-v2n-lang"); if (s === "it" || s === "en") lang = s; } catch (e) {}
 
-/* ---------- 2. signal: 1 s at 16 kHz, synthetic word (vowel "e", vowel "a", fricative) ---------- */
+/* ---------- 2. signal: 1 s at 16 kHz — the recorded word, or a synthetic one if tools/word_data.js is missing ---------- */
+// The recorded samples feed scenes 3–6 (samples, the whole second, frames, MFCC); scenes 1–2 use the same word's tones.
+const REC = window.EXS_WORD && window.EXS_WORD.samples ? window.EXS_WORD : null;
 const SR = 16000, N = 16000, HOP = 160, WIN = 320, NFFT = 512, NFR = 1 + Math.floor((N - NFFT) / HOP); // 97, as librosa with center=False
 let seed = 12345;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const x = new Float32Array(N);
-(function synth() {
+if (REC) { // base64 → int16 little-endian → -1..1, as the board stores them
+  const b = atob(REC.samples);
+  for (let n = 0; n < N; n++) { const v = b.charCodeAt(2 * n) | b.charCodeAt(2 * n + 1) << 8; x[n] = (v > 32767 ? v - 65536 : v) / 32768; }
+}
+else (function synth() { // synthetic word: vowel "e", vowel "a", fricative
   const g = (t, c, w) => Math.exp(-Math.pow((t - c) / w, 2));
   const F_E = [[480, 1], [1850, .7], [2600, .35]], F_A = [[760, 1], [1220, .8], [2500, .3]];
   const gain = (f, F) => F.reduce((s, [c, a]) => s + a * Math.exp(-Math.pow((f - c) / 140, 2)), 0) + 0.08;
@@ -332,7 +338,9 @@ function setTimelines() {
   S1 = buildSource(TL1, sig); S2 = buildSource(TL2, sig);
 }
 setTimelines();
-fetch("tools/tones_stft.json").then(r => r.ok ? r.json() : Promise.reject(r.status)).then(useTones).catch(() => {}); // keeps the formulas on failure
+// the tones come with tools/word_data.js (applied once the player is set up, at the end of the file); without that file
+// the page still tries tools/tones_stft.json, which only works when served over http
+if (!REC) fetch("tools/tones_stft.json").then(r => r.ok ? r.json() : Promise.reject(r.status)).then(useTones).catch(() => {}); // keeps the formulas on failure
 
 // "what the wave is made of": the current frame's tones as thin lines over the summed wave (toReal: graph time → word time)
 let showTones = false;
@@ -704,7 +712,7 @@ function sceneMic(p) {
 
 function sceneSamples(p, T) {
   const L = TXT[lang].L, pad = W * .04;
-  const start = 4960, K = 160; // 10 ms inside the first vowel
+  const start = REC ? 8640 : 4960, K = 160; // 10 ms inside a vowel: the "a" of the recording (0.54 s), or the synthetic "e"
   const X0 = pad + W * .05, X1 = W - pad, Y0 = H * .14, Y1 = H * .72, yc = (Y0 + Y1) / 2, A = (Y1 - Y0) / 2;
   axes(X0, X1, Y0, Y1);
   const sxp = k => X0 + (X1 - X0) * k / (K - 1), syp = v => yc - v * A;
@@ -1092,6 +1100,7 @@ function frame(now) {
 }
 
 readTheme(); resize(); setLang(lang);
+if (REC) useTones(REC.tones); // the recorded word for scenes 1 and 2
 window.addEventListener("resize", resize);
 requestAnimationFrame(t => { last = t; frame(t); });
 })();
