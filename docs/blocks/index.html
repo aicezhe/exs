@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>exs · Navigation</title>
+<title>exs</title>
 <style>
   :root {
     --bg0: #030720;
@@ -25,14 +25,32 @@
   main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 36px 20px 64px; min-height: 100vh; }
   .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
   .brand { margin: 8px 0 0; font: 600 clamp(28px, 4vw, 44px)/1.1 var(--mono); letter-spacing: -.02em; }
-  .tag { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+  body.home .head { display: none; } /* the compact header (small "exs" and the kicker) is for the panels only */
+
+  /* Home: the wordmark and its etymology */
+  .hero { margin-top: 0; }
+  body.home main { padding-bottom: 16px; } /* the whole home view fits a 1440 x 900 screen */
+  .wordmark { margin: 0; font: 600 clamp(72px, 16vw, 160px)/1 var(--mono); letter-spacing: -.04em; color: var(--ink); }
+  .wordmark .l { display: inline-block; }
+  /* the pink dot is drawn, not typed: a "." in a monospace font is a square set in a wide cell */
+  .wordmark .dot { width: .15em; height: .15em; margin-left: .07em; border-radius: 50%; background: var(--pink); box-shadow: 0 0 .2em rgba(255, 79, 163, .6); }
+  .lede { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 32px; margin-top: 12px; }
+  .etym, .said { margin: 0; font-size: clamp(15px, 1.7vw, 19px); line-height: 1.45; }
+  .etym { color: var(--muted); }
+  .etym i { font-style: italic; }
+  .said { color: var(--ink); }
+  /* once per visit, the first time the home view shows (JS adds .intro): letters rise one after another, then the lines fade in */
+  .intro .wordmark .l { animation: letter .55s ease both; animation-delay: calc(var(--i) * 80ms); }
+  .intro .fade { animation: fadein .6s ease .45s both; }
+  @keyframes letter { from { opacity: 0; transform: translateY(.22em); } to { opacity: 1; transform: none; } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
   .view { display: none; }
   .view.on { display: block; animation: rise .4s ease both; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
   /* Home: three big rows */
-  #home { margin-top: 8vh; }
+  .rows { margin-top: clamp(8px, 2vh, 24px); }
   .row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
     padding: clamp(14px, 3vh, 28px) 4px; border-bottom: 1px solid rgba(143, 160, 214, .22);
     transition: padding-left .25s ease, border-color .25s ease; }
@@ -68,23 +86,31 @@
   .card.soon { opacity: .5; border-style: dashed; }
   .card.soon .chip { border-color: rgba(143, 160, 214, .3); color: var(--muted); }
   .card.soon .n { color: var(--muted); }
-  @media (prefers-reduced-motion: reduce) { .view.on { animation: none; } .card, .row { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .view.on, .intro .wordmark .l, .intro .fade { animation: none; } .card, .row { transition: none; } }
 </style>
 </head>
-<body>
+<body class="home">
 <canvas id="bg"></canvas>
 <main>
-  <header>
+  <header class="head">
     <div class="kicker">TinyML · keyword spotting</div>
     <div class="brand">exs</div>
-    <p class="tag">Say a word. The laptop does the rest.</p>
   </header>
 
-  <nav id="home" class="view" data-view="">
-    <a class="row" href="#what"><span class="big">What.</span><span class="cap">what the project does</span></a>
-    <a class="row" href="#why"><span class="big">Why.</span><span class="cap">why I chose it</span></a>
-    <a class="row" href="#how"><span class="big">How.</span><span class="cap">how it works, in 12 blocks</span></a>
-  </nav>
+  <div id="home" class="view" data-view="">
+    <section class="hero">
+      <h1 class="wordmark" id="wm" aria-label="exs"><span class="l" style="--i:0" aria-hidden="true">e</span><span class="l" style="--i:1" aria-hidden="true">x</span><span class="l" style="--i:2" aria-hidden="true">s</span><span class="l dot" style="--i:3" aria-hidden="true"></span></h1>
+      <div class="lede fade">
+        <p class="etym">from Latin <i>exsecutio</i> — a carrying out, a performing</p>
+        <p class="said">Say a word. The laptop does it.</p>
+      </div>
+    </section>
+    <nav class="rows" aria-label="Sections">
+      <a class="row" href="#what"><span class="big">What.</span><span class="cap">what the project does</span></a>
+      <a class="row" href="#why"><span class="big">Why.</span><span class="cap">why I chose it</span></a>
+      <a class="row" href="#how"><span class="big">How.</span><span class="cap">how it works, in 12 blocks</span></a>
+    </nav>
+  </div>
 
   <section class="view" data-view="what">
     <a class="back" href="#">← back</a>
@@ -145,10 +171,17 @@ BLOCKS.forEach((b, i) => {
 
 /* ---- view routing by URL hash: #what, #why, #how (back button works) ---- */
 const views = [...document.querySelectorAll('.view')];
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let introDone = false;
 function route() {
   const h = location.hash.replace('#', '');
   const name = ['what', 'why', 'how'].includes(h) ? h : '';
   views.forEach(v => v.classList.toggle('on', v.dataset.view === name));
+  document.body.classList.toggle('home', name === '');
+  if (name === '' && !introDone) { // the entrance plays once, never again when coming back to home
+    introDone = true;
+    if (!reduceMotion) { document.body.classList.add('intro'); setTimeout(() => document.body.classList.remove('intro'), 1600); }
+  }
   window.scrollTo(0, 0);
 }
 addEventListener('hashchange', route); route();
