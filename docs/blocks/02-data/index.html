@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 2 · Dataset index</title>
+<style>
+  :root {
+    --bg0: #030720;
+    --bg1: #0a1650;
+    --link: #3b7bff;
+    --pink: #ff4fa3;
+    --setting: #9db8ff;
+    --ink: #e8eeff;
+    --muted: #8fa0d6;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+
+  .hud { position: fixed; pointer-events: none; z-index: 2; }
+  .hud.tl { top: 28px; left: 32px; }
+  .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
+  /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
+    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: border-color .2s, color .2s; }
+  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
+  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .sub { font-size: 14px; color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+
+  /* step caption and the step controls, bottom centre */
+  #cap { position: fixed; z-index: 2; left: 50%; bottom: 86px; transform: translateX(-50%); width: min(660px, calc(100vw - 32px));
+    text-align: center; font-size: 14.5px; line-height: 1.45; color: var(--ink); pointer-events: none; min-height: 21px; }
+  #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
+  #nav button { font: inherit; color: var(--ink); background: rgba(8, 16, 64, .72); border: 1px solid rgba(143, 160, 214, .4);
+    cursor: pointer; display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px);
+    transition: border-color .2s, box-shadow .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible { border-color: var(--pink); outline: none; }
+  #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; border-color: rgba(255, 79, 163, .7) !important;
+    box-shadow: 0 0 22px rgba(255, 79, 163, .25); }
+  #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
+  #dots { display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
+  #dots i.on { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink); }
+
+  #card {
+    position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
+    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    backdrop-filter: blur(6px); pointer-events: none;
+    opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
+  }
+  #card.on { opacity: 1; transform: none; }
+  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
+  #card.quiet { border-color: rgba(143, 160, 214, .5); box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  #card.setting .tag { color: var(--setting); }
+  #card.quiet .tag { color: var(--muted); }
+  #card h2 { margin: 6px 0 10px; font: 600 24px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
+  #card.setting h2 { color: var(--setting); }
+  #card.quiet h2 { color: var(--ink); }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
+    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card p { margin: 0; font-size: 14.5px; line-height: 1.5; }
+  @media (max-width: 700px) {
+    #card { left: 16px !important; right: 16px; top: auto !important; bottom: 100px; width: auto; }
+    .hud.tl { left: 16px; top: 18px; }
+    .hud.bl { display: none; }
+    #cap { font-size: 13px; bottom: 80px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #card { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud tl" id="hud">
+  <a class="back" href="../#how">← all blocks</a>
+  <div class="kicker">Block 2 of 12</div>
+  <h1>Dataset index</h1>
+  <div class="sub">notebook cell 1 · tap or hover a part of a file name</div>
+</div>
+<div class="hud bl">
+  <span><i class="dot" style="background:#ff4fa3;box-shadow:0 0 8px #ff4fa3"></i>label</span>
+  <span><i class="dot" style="background:#9db8ff;box-shadow:0 0 8px #9db8ff"></i>speaker</span>
+  <span><i class="dot" style="background:#8a93b8"></i>number</span>
+  <span><i class="dot" style="background:#4f6fc0"></i>.wav</span>
+</div>
+
+<div id="cap" aria-live="polite"></div>
+<nav id="nav" aria-label="Steps">
+  <button id="prev" type="button" aria-label="Previous step">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next step">→</button>
+</nav>
+<div id="card" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   DATA. Replace FILES with the real file names; everything on the page
+   (rows, speakers, counts, ignored and skipped groups) is derived from
+   FILES and CLASSES. CLASSES keeps the order of the network's outputs.
+------------------------------------------------------------------ */
+const CLASSES = ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
+const FILES = [
+  'telegram.anna.01.wav', 'telegram.anna.02.wav', 'telegram.bob.01.wav',
+  'elly.anna.01.wav', 'elly.bob.01.wav', 'elly.carla.01.wav',
+  'slack.anna.01.wav', 'slack.carla.01.wav',
+  'focus.bob.01.wav', 'focus.carla.01.wav', 'focus.anna.02.wav',
+  'noise.anna.01.wav', 'noise.bob.01.wav',
+  'unknown.carla.01.wav', 'unknown.anna.01.wav', 'unknown.bob.02.wav',
+  'silence.anna.01.wav', 'test.bob.01.wav',   // labels that are not in CLASSES
+  'recording.wav',                            // a name with fewer than 3 parts
+];
+
+const CAPTIONS = [
+  'Every file name carries its own labels.',
+  'parse_name splits each name. Rows that pass go into df, the rest never enter it.',
+  'pd.crosstab: clips per class and speaker. All = totals.',
+];
+
+// what each part of a file name means (cards)
+const PART_INFO = {
+  label:   { tag: 'file name part', code: 'label = parts[0].lower()',
+             text: 'The word that was said. This is the answer the model learns to predict. Read from the file name and lower-cased.' },
+  speaker: { tag: 'file name part', code: 'speaker = parts[1].lower()',
+             text: 'Who said it. The model does not predict it. Used later to hold one speaker out for an honest test.' },
+  number:  { tag: 'file name part', code: 'parts[2]  # not stored',
+             text: 'Take number. Only keeps file names unique. Not stored in the table.' },
+  ext:     { tag: 'file name part', code: 'rglob("*.wav")',
+             text: 'Extension. The pattern *.wav selects the file.' },
+};
+
+/* ------------------------------------------------------------------
+   Parsing: the same logic as parse_name in notebook cell 1.
+------------------------------------------------------------------ */
+function parseName(name) {
+  const stem = name.replace(/\.wav$/i, '');
+  const parts = stem.split('.');
+  if (parts.length < 3) return null;                     // -> skipped
+  return { label: parts[0].toLowerCase(), speaker: parts[1].toLowerCase(), number: parts.slice(2).join('.') };
+}
+
+const COL = { label: '#ff4fa3', speaker: '#9db8ff', number: '#8a93b8', ext: '#4f6fc0', dot: '#4f6fc0', stem: '#c9d3f5' };
+const GRAY = [127, 137, 176];
+
+const ITEMS = FILES.map(name => {
+  const r = parseName(name), stem = name.replace(/\.wav$/i, '');
+  const kind = !r ? 'skipped' : CLASSES.includes(r.label) ? 'ignored_or_ok' : 'ignored';
+  const segs = r
+    ? [{ k: 'label', t: r.label }, { k: 'dot', t: '.' }, { k: 'speaker', t: r.speaker }, { k: 'dot', t: '.' }, { k: 'number', t: r.number }, { k: 'ext', t: '.wav' }]
+    : [{ k: 'stem', t: stem }, { k: 'ext', t: '.wav' }];
+  return { name, kind: kind === 'ignored_or_ok' ? 'ok' : kind, parsed: r, segs, w: 0, x: 0, y: 0, vx: 0, vy: 0, ph: 0, gray: 0, row: -1 };
+});
+const OK = ITEMS.filter(i => i.kind === 'ok').sort((a, b) => (a.name < b.name ? -1 : 1));
+OK.forEach((it, r) => { it.row = r; });
+const SPEAKERS = [...new Set(OK.map(i => i.parsed.speaker))].sort();
+const COUNT = {}; // COUNT[label][speaker]
+CLASSES.forEach(c => { COUNT[c] = {}; SPEAKERS.forEach(s => { COUNT[c][s] = 0; }); });
+OK.forEach(i => { COUNT[i.parsed.label][i.parsed.speaker]++; });
+const MAXC = Math.max(1, ...CLASSES.flatMap(c => SPEAKERS.map(s => COUNT[c][s])));
+const rowTotal = c => SPEAKERS.reduce((s, sp) => s + COUNT[c][sp], 0);
+const colTotal = sp => CLASSES.reduce((s, c) => s + COUNT[c][sp], 0);
+
+/* ------------------------------------------------------------------
+   Pieces: an ok file is three pieces (the whole name, its label and its
+   speaker), so the coloured parts can fly to their own table cells.
+------------------------------------------------------------------ */
+const pieces = [];
+ITEMS.forEach(it => {
+  pieces.push({ it, type: 'path' });
+  if (it.kind === 'ok') { pieces.push({ it, type: 'label' }); pieces.push({ it, type: 'speaker' }); }
+});
+
+/* ------------------------------------------------------------------
+   Setup
+------------------------------------------------------------------ */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const card = document.getElementById('card'), hudEl = document.getElementById('hud'), capEl = document.getElementById('cap');
+const prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), dots = [...document.querySelectorAll('#dots i')];
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+
+let W = 0, H = 0, narrow = false, fs = 15, lh = 28, step = 0, now = 0, firstLayout = true;
+const L = {};
+const A = { frame: 0, tbl: 0, xt: 0, zone: 0 }; // fades, eased every frame
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mix = (a, b, t) => a + (b - a) * t;
+function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function rgba(c, a) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ------------------------------------------------------------------
+   Layout (recomputed on resize): the floating area, the table, the
+   crosstab and the "null" zone at the bottom.
+------------------------------------------------------------------ */
+function layout() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight; narrow = W < 700;
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fs = narrow ? 12.5 : 15; lh = Math.round(fs * 1.9);
+  ctx.font = `${fs}px ${MONO}`;
+  ITEMS.forEach(it => { let x = 0; it.segs.forEach(s => { s.w = ctx.measureText(s.t).width; s.x0 = x; x += s.w; s.x1 = x; }); it.w = x; });
+  const pad = narrow ? 16 : 32, hudR = hudEl.getBoundingClientRect(), hudB = hudR.bottom;
+  const capTop = capEl.getBoundingClientRect().top;
+  L.pad = pad;
+  L.float = { x0: pad, x1: W - pad, y0: hudB + 10, y1: capTop - 10 };
+
+  // the null zone
+  const zoneH = narrow ? 124 : 140, zb = capTop - 10, zt = zb - zoneH, total = W - 2 * pad, ig = total * (narrow ? .57 : .6);
+  L.zone = { x0: pad, y0: zt, x1: W - pad, y1: zb, split: pad + ig };
+  const iy = zt + (narrow ? 50 : 48);
+  L.zoneIg = { x0: pad + 8, x1: pad + ig - 6, y0: iy, y1: zb - 6 };
+  L.zoneSk = { x0: pad + ig + 8, x1: W - pad - 8, y0: iy, y1: zb - 6 };
+
+  // the table: columns sized from the real names
+  const pc = narrow ? 10 : 16, wOf = t => ctx.measureText(t).width;
+  const pathW = Math.max(...OK.map(i => i.w), wOf('path')) + 2 * pc;
+  const labW = Math.max(...OK.map(i => i.segs[0].w), wOf('label')) + 2 * pc;
+  const spkW = Math.max(...OK.map(i => i.segs[2].w), wOf('speaker')) + 2 * pc;
+  const tw = pathW + labW + spkW, tx0 = (W - tw) / 2;
+  L.tx0 = tx0; L.tw = tw; L.pc = pc;
+  L.pathX = tx0 + pc; L.labX = tx0 + pathW + pc; L.spkX = tx0 + pathW + labW + pc;
+
+  // the classes caption above the table: wide screens keep it in the top band unless it would sit under the HUD text
+  const clash = tx0 < hudR.right + 16;
+  const ctop = narrow || clash ? hudB + 8 : 34;
+  ctx.font = `${fs * .85}px ${MONO}`;
+  const chips = []; let cx = tx0, cy = ctop + 32, chipH = 22;
+  CLASSES.forEach(c => {
+    const w = ctx.measureText(c).width + 16;
+    if (cx + w > W - pad && cx > tx0) { cx = tx0; cy += chipH + 4; }
+    chips.push({ c, x: cx, y: cy, w, h: chipH }); cx += w + 6;
+  });
+  L.chips = chips; L.ctop = ctop;
+  const tableTop = cy + chipH + 10; L.tt = tableTop;
+  const avail = zt - 12 - tableTop, R = OK.length;
+  L.rowH = clamp(avail / (R + 1), 15, 30); L.th = L.rowH * (R + 1);
+
+  // the crosstab: same left edge and width as the table
+  const colsN = SPEAKERS.length + 1;
+  ctx.font = `${fs}px ${MONO}`;
+  L.xtLab = Math.max(...CLASSES.map(wOf), wOf('All')) + 2 * pc;
+  L.xtCol = (tw - L.xtLab) / colsN;
+  L.xtRow = Math.min(34, L.th / (CLASSES.length + 2));
+  L.xth = L.xtRow * (CLASSES.length + 2);
+  L.counter = narrow ? { x: W - pad, y: ctop + 8, align: 'right' } : { x: tx0 + tw + 24, y: tableTop + L.rowH * 1.5, align: 'left' };
+
+  if (firstLayout) { firstLayout = false; initPositions(); pieces.forEach(p => { const t = target(p); p.x = p.fx = t.x; p.y = p.fy = t.y; p.a = p.fa = t.a; p.t0 = -1e9; p.dur = 0; p.u = 1; }); }
+}
+
+function boundsFor(it) {
+  if (step === 0 || it.kind === 'ok') return L.float;
+  return it.kind === 'ignored' ? L.zoneIg : L.zoneSk;
+}
+
+function initPositions() {
+  const b = L.float, order = ITEMS.map((_, i) => i).sort(() => rnd() - .5), n = ITEMS.length;
+  order.forEach((idx, k) => {
+    const it = ITEMS[idx];
+    it.x = b.x0 + rnd() * Math.max(0, b.x1 - b.x0 - it.w);
+    it.y = b.y0 + lh / 2 + (k + .5) / n * Math.max(0, b.y1 - b.y0 - lh);
+    const a = rnd() * 6.283, sp = 14 + rnd() * 14;
+    it.vx = Math.cos(a) * sp; it.vy = Math.sin(a) * sp; it.ph = rnd() * 6.283;
+  });
+}
+
+/* ------------------------------------------------------------------
+   Where each piece wants to be in the current step.
+------------------------------------------------------------------ */
+function wob(it, t) { return reduce ? 0 : Math.sin(t * .9 + it.ph) * 2.5; }
+let tNow = 0;
+function target(p) {
+  const it = p.it;
+  if (it.kind !== 'ok') return { x: it.x, y: it.y + wob(it, tNow), a: 1 };
+  if (step === 0) {
+    const y = it.y + wob(it, tNow);
+    if (p.type === 'path') return { x: it.x, y, a: 1 };
+    return { x: it.x + it.segs[p.type === 'label' ? 0 : 2].x0, y, a: 0 };
+  }
+  const w = p.type === 'path' ? it.w : it.segs[p.type === 'label' ? 0 : 2].w;
+  if (step === 1) {
+    const y = L.tt + L.rowH * (it.row + 1.5);
+    return { x: p.type === 'path' ? L.pathX : p.type === 'label' ? L.labX : L.spkX, y, a: 1 };
+  }
+  const c = SPEAKERS.indexOf(it.parsed.speaker), r = CLASSES.indexOf(it.parsed.label);
+  return { x: L.tx0 + L.xtLab + L.xtCol * (c + .5) - w / 2, y: L.tt + L.xtRow * (r + 1.5), a: 0 };
+}
+
+/* ------------------------------------------------------------------
+   Steps
+------------------------------------------------------------------ */
+function setStep(n) {
+  if (n === step || n < 0 || n > 2) return;
+  const prev = step; step = n; act = null; shownKey = ''; card.classList.remove('on');
+  const t = performance.now();
+  pieces.forEach(p => {
+    p.fx = p.x; p.fy = p.y; p.fa = p.a; p.u = 0;
+    if (p.it.kind === 'ok') { p.t0 = t + p.it.row * (n > prev ? 40 : 14); p.dur = n === 2 ? 700 : 850; }
+    else { p.t0 = t; p.dur = 1000; }
+    if (reduce) p.dur = 0;
+  });
+  syncUI();
+}
+function syncUI() {
+  capEl.textContent = CAPTIONS[step];
+  dots.forEach((d, i) => d.classList.toggle('on', i === step));
+  prevBtn.disabled = step === 0; nextBtn.disabled = step === 2;
+}
+prevBtn.addEventListener('click', () => setStep(step - 1));
+nextBtn.addEventListener('click', () => setStep(step + 1));
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') setStep(step + 1);
+  else if (e.key === 'ArrowLeft') setStep(step - 1);
+  else if (e.key === 'Escape') { act = null; }
+});
+
+/* ------------------------------------------------------------------
+   Pointer: hover on a mouse, tap on a touch screen (a tap on empty
+   space closes the card), as in block 1.
+------------------------------------------------------------------ */
+const pointer = { x: -1e4, y: -1e4, inside: false, type: 'mouse', tap: false };
+cv.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; });
+cv.addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; pointer.tap = true; });
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') pointer.inside = false; });
+
+let act = null, shownKey = ''; // act: { it, seg } (seg null: the whole name)
+function pick() {
+  const px = pointer.x, py = pointer.y;
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const p = pieces[i]; if (p.type !== 'path') continue;
+    const it = p.it; if (step > 0 && it.kind === 'ok') continue;
+    if (px < p.x - 5 || px > p.x + it.w + 5 || Math.abs(py - p.y) > lh / 2 + 3) continue;
+    if (step > 0) return { it, seg: null };
+    const ox = px - p.x; let best = null, bd = 1e9;
+    for (const s of it.segs) {
+      if (s.k === 'dot') continue;
+      const d = ox < s.x0 ? s.x0 - ox : ox > s.x1 ? ox - s.x1 : 0;
+      if (d < bd) { bd = d; best = s; }
+    }
+    return { it, seg: best };
+  }
+  return null;
+}
+
+function showCard() {
+  const key = act ? ITEMS.indexOf(act.it) + ':' + (act.seg ? act.seg.k : '*') : '';
+  if (key === shownKey) return; shownKey = key;
+  if (!act) { card.classList.remove('on'); return; }
+  const it = act.it, k = act.seg ? act.seg.k : null;
+  let tag, h2, code, text, cls = '';
+  if (k && PART_INFO[k]) {
+    const i = PART_INFO[k]; tag = i.tag; code = i.code; text = i.text; h2 = act.seg.t;
+    cls = k === 'label' ? '' : k === 'speaker' ? 'setting' : 'quiet';
+  } else if (it.kind === 'skipped') {
+    tag = 'skipped'; h2 = it.name; code = 'parse_name(path) -> None'; text = 'parse_name returns None: fewer than 3 parts'; cls = 'quiet';
+  } else {
+    tag = 'ignored label'; h2 = it.name; code = `"${it.parsed.label}" not in CLASSES`; text = `label ${it.parsed.label} is not in CLASSES, so it is ignored`; cls = 'quiet';
+  }
+  card.className = cls;
+  card.innerHTML = `<div class="tag"></div><h2></h2><code></code><p></p>`;
+  card.querySelector('.tag').textContent = tag; card.querySelector('h2').textContent = h2;
+  card.querySelector('code').textContent = code; card.querySelector('p').textContent = text;
+  card.classList.add('on');
+}
+function placeCard(p) {
+  if (narrow) { card.style.left = ''; card.style.top = ''; return; }
+  const cw = card.offsetWidth, ch = card.offsetHeight, sx = act.seg ? p.x + act.seg.x0 : p.x;
+  const left = clamp(sx, 16, W - cw - 16);
+  let top = p.y + lh / 2 + 16; if (top + ch > H - 16) top = p.y - lh / 2 - 16 - ch;
+  card.style.left = left + 'px'; card.style.top = Math.max(16, top) + 'px';
+}
+
+/* ------------------------------------------------------------------
+   Drawing
+------------------------------------------------------------------ */
+function drift(dt) {
+  const groups = new Map();
+  ITEMS.forEach(it => {
+    if (step > 0 && it.kind === 'ok') return;           // in the table: no drift
+    const b = boundsFor(it);
+    it.x += it.vx * dt * (reduce ? .15 : 1); it.y += it.vy * dt * (reduce ? .15 : 1);
+    const xmax = Math.max(b.x0, b.x1 - it.w), ymin = b.y0 + lh / 2, ymax = Math.max(ymin, b.y1 - lh / 2);
+    if (it.x < b.x0) { it.x = b.x0; it.vx = Math.abs(it.vx); } else if (it.x > xmax) { it.x = xmax; it.vx = -Math.abs(it.vx); }
+    if (it.y < ymin) { it.y = ymin; it.vy = Math.abs(it.vy); } else if (it.y > ymax) { it.y = ymax; it.vy = -Math.abs(it.vy); }
+    if (!groups.has(b)) groups.set(b, []);
+    groups.get(b).push(it);
+  });
+  // soft repulsion so names do not pile up
+  groups.forEach(list => {
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], c = list[j];
+      const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x) + 8, oy = lh - Math.abs(a.y - c.y) + 2;
+      if (ox > 0 && oy > 0) {
+        if (oy < ox) { const s = a.y < c.y ? -1 : 1; a.vy += s * 40 * dt; c.vy -= s * 40 * dt; }
+        else { const s = a.x < c.x ? -1 : 1; a.vx += s * 40 * dt; c.vx -= s * 40 * dt; }
+      }
+    }
+  });
+  ITEMS.forEach(it => { const m = Math.hypot(it.vx, it.vy), lim = 30; if (m > lim) { it.vx *= lim / m; it.vy *= lim / m; } if (m < 9 && m > 0) { it.vx *= 9 / m; it.vy *= 9 / m; } });
+}
+
+function drawLabel(t, x, y, a, color, size, align) {
+  ctx.globalAlpha = a; ctx.fillStyle = color; ctx.font = `${size}px ${MONO}`; ctx.textAlign = align || 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(t, x, y); ctx.globalAlpha = 1;
+}
+
+function drawTable() {
+  const fa = A.frame, tbl = A.tbl, xt = A.xt;
+  if (fa < .01) return;
+  const h = mix(L.th, L.xth, xt);
+  ctx.globalAlpha = fa; rr(L.tx0 - 6, L.tt - 4, L.tw + 12, h + 8, 12);
+  ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(59,123,255,.55)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
+
+  // classes caption
+  drawLabel('CLASSES · only our data', L.tx0, L.ctop + 8, fa * .95, '#8fa0d6', fs * .8);
+  L.chips.forEach(c => {
+    ctx.globalAlpha = fa; rr(c.x, c.y - c.h / 2 + 0, c.w, c.h, 11); ctx.strokeStyle = 'rgba(255,79,163,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+    drawLabel(c.c, c.x + 8, c.y, fa, COL.label, fs * .85);
+  });
+
+  // table header and row lines
+  if (tbl > .01) {
+    const hy = L.tt + L.rowH * .5;
+    drawLabel('path', L.pathX, hy, tbl, '#8fa0d6', fs * .85); drawLabel('label', L.labX, hy, tbl, '#8fa0d6', fs * .85); drawLabel('speaker', L.spkX, hy, tbl, '#8fa0d6', fs * .85);
+    ctx.strokeStyle = `rgba(143,160,214,${.28 * tbl})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L.tx0 + 6, L.tt + L.rowH); ctx.lineTo(L.tx0 + L.tw - 6, L.tt + L.rowH); ctx.stroke();
+    OK.forEach(it => {
+      const p = pieces.find(q => q.it === it && q.type === 'path'), y = L.tt + L.rowH * (it.row + 2);
+      ctx.strokeStyle = `rgba(143,160,214,${.1 * tbl * clamp(p.a, 0, 1) * clamp(p.u, 0, 1)})`;
+      ctx.beginPath(); ctx.moveTo(L.tx0 + 6, y); ctx.lineTo(L.tx0 + L.tw - 6, y); ctx.stroke();
+    });
+  }
+
+  // crosstab
+  if (xt > .01) {
+    const x0 = L.tx0, y0 = L.tt, cw = L.xtCol, rh = L.xtRow;
+    const hy = y0 + rh * .5;
+    SPEAKERS.forEach((s, c) => drawLabel(s, x0 + L.xtLab + cw * (c + .5), hy, xt, COL.speaker, fs * .9, 'center'));
+    drawLabel('All', x0 + L.xtLab + cw * (SPEAKERS.length + .5), hy, xt, '#c9d3f5', fs * .9, 'center');
+    [...CLASSES, 'All'].forEach((c, r) => {
+      const y = y0 + rh * (r + 1);
+      drawLabel(c, x0 + L.pc, y + rh / 2, xt, c === 'All' ? '#c9d3f5' : COL.label, fs * .9);
+      for (let k = 0; k <= SPEAKERS.length; k++) {
+        const isAll = c === 'All' || k === SPEAKERS.length;
+        const n = c === 'All' ? (k === SPEAKERS.length ? OK.length : colTotal(SPEAKERS[k])) : (k === SPEAKERS.length ? rowTotal(c) : COUNT[c][SPEAKERS[k]]);
+        const x = x0 + L.xtLab + cw * k;
+        ctx.globalAlpha = xt; rr(x + 2, y + 2, cw - 4, rh - 4, 6);
+        ctx.fillStyle = isAll ? 'rgba(157,184,255,.10)' : `rgba(59,123,255,${.07 + .6 * n / MAXC})`; ctx.fill(); ctx.globalAlpha = 1;
+        drawLabel(String(n), x + cw / 2, y + rh / 2, xt * (n === 0 ? .45 : 1), isAll ? '#c9d3f5' : '#e8eeff', fs, 'center');
+      }
+    });
+  }
+
+  // clips counter
+  const arrived = step === 2 ? OK.length : pieces.filter(p => p.type === 'path' && p.it.kind === 'ok' && p.u >= .999).length;
+  const cnt = L.counter; ctx.font = `${fs}px ${MONO}`;
+  const nW = ctx.measureText(String(arrived)).width, lW = ctx.measureText('Clips: ').width;
+  const x = cnt.align === 'right' ? cnt.x - nW - lW : cnt.x;
+  drawLabel('Clips: ', x, cnt.y, fa, '#8fa0d6', fs); drawLabel(String(arrived), x + lW, cnt.y, fa, '#e8eeff', fs * 1.1);
+}
+
+function drawZone() {
+  const z = A.zone; if (z < .01) return; const b = L.zone;
+  ctx.globalAlpha = z; rr(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, 12);
+  ctx.fillStyle = 'rgba(4,10,42,.35)'; ctx.fill(); ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(143,160,214,.45)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(b.split, b.y0 + (narrow ? 34 : 34)); ctx.lineTo(b.split, b.y1 - 10); ctx.strokeStyle = 'rgba(143,160,214,.2)'; ctx.stroke(); ctx.globalAlpha = 1;
+  const sm = Math.max(10.5, fs * .8);
+  drawLabel('null · never enters df', b.x0 + 12, b.y0 + 16, z, '#c9d3f5', sm);
+  const two = (t1, t2, x) => { drawLabel(t1, x, b.y0 + 34, z, '#8fa0d6', sm); if (t2) drawLabel(t2, x, b.y0 + 34 + sm + 3, z, '#8fa0d6', sm); };
+  if (narrow) { two('Ignored labels:', 'not in CLASSES', b.x0 + 12); two('Skipped:', 'wrong file name', b.split + 10); }
+  else { two('Ignored labels: not in CLASSES', '', b.x0 + 12); two('Skipped: wrong file name', '', b.split + 12); }
+}
+
+function drawPieces() {
+  const dimOn = !!act;
+  pieces.forEach(p => {
+    const it = p.it, a0 = p.a; if (a0 < .01) return;
+    const dim = dimOn && !(act.it === it) ? .22 : 1, g = it.gray;
+    if (p.type !== 'path') {
+      const s = it.segs[p.type === 'label' ? 0 : 2];
+      drawLabel(s.t, p.x, p.y, a0 * dim, COL[s.k], fs); return;
+    }
+    ctx.font = `${fs}px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    it.segs.forEach(s => {
+      const base = hex(COL[s.k]), c = [mix(base[0], GRAY[0], g), mix(base[1], GRAY[1], g), mix(base[2], GRAY[2], g)];
+      const on = dimOn && act.it === it && act.seg === s;
+      if (on) {
+        ctx.save(); ctx.globalAlpha = a0; rr(p.x + s.x0 - 4, p.y - lh / 2 + 2, s.w + 8, lh - 4, 7);
+        ctx.fillStyle = rgba(c, .2); ctx.shadowColor = rgba(c, 1); ctx.shadowBlur = 16; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = rgba(c, .9); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+      }
+      ctx.globalAlpha = a0 * dim * (it.kind !== 'ok' ? 1 - .35 * g : 1); ctx.fillStyle = rgba(c, 1);
+      if (on) { ctx.shadowColor = rgba(c, 1); ctx.shadowBlur = 10; }
+      ctx.fillText(s.t, p.x + s.x0, p.y); ctx.shadowBlur = 0;
+    });
+    ctx.globalAlpha = 1;
+  });
+}
+
+let last = 0;
+function frame(ts) {
+  const t = ts / 1000, dt = Math.min(.05, last ? t - last : .016); last = t; tNow = t; now = performance.now();
+
+  // hover / tap
+  if (pointer.type === 'mouse') act = pointer.inside ? pick() : null;
+  else if (pointer.tap) act = pick();
+  pointer.tap = false;
+
+  drift(dt);
+  // pieces glide to their targets (ease-out); a piece waits for its delay first
+  pieces.forEach(p => {
+    const u = p.dur === 0 ? 1 : clamp((now - p.t0) / p.dur, 0, 1), e = 1 - Math.pow(1 - u, 3), tg = target(p);
+    p.u = u; p.x = mix(p.fx, tg.x, e); p.y = mix(p.fy, tg.y, e); p.a = mix(p.fa, tg.a, e);
+  });
+  ITEMS.forEach(it => { if (it.kind !== 'ok') it.gray += ((step >= 1 ? 1 : 0) - it.gray) * (reduce ? 1 : Math.min(1, dt * 3)); });
+  const k = reduce ? 1 : Math.min(1, dt * 5);
+  A.frame += ((step >= 1 ? 1 : 0) - A.frame) * k; A.zone += ((step >= 1 ? 1 : 0) - A.zone) * k;
+  A.tbl += ((step === 1 ? 1 : 0) - A.tbl) * k; A.xt += ((step === 2 ? 1 : 0) - A.xt) * k;
+
+  ctx.clearRect(0, 0, W, H);
+  drawZone(); drawTable(); drawPieces();
+  cv.style.cursor = act ? 'pointer' : 'default';
+
+  showCard();
+  if (act) { const p = pieces.find(q => q.it === act.it && q.type === 'path'); placeCard(p); }
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', () => { layout(); });
+syncUI(); layout();
+requestAnimationFrame(frame);
+
+// debug hook used by the test script
+window.__exs2 = { step: () => step, items: () => pieces.filter(p => p.type === 'path').map(p => ({ name: p.it.name, kind: p.it.kind, x: p.x, y: p.y, w: p.it.w })), layout: () => L, rows: () => OK.length, ignored: () => ITEMS.filter(i => i.kind === 'ignored').length, skipped: () => ITEMS.filter(i => i.kind === 'skipped').length };
+})();
+</script>
+</body>
+</html>
