@@ -1,4 +1,9 @@
 (() => {
+/* ---------- the word "telegram" (scenes 1 and 2), from tools/tones_stft.json ---------- */
+// When each sound happens in the 1-second recording, in seconds: start and end. Adjust by hand.
+const TIMES = { t: [0.18, 0.25], a: [0.52, 0.66], m: [0.67, 0.80] };
+const WORD_SLOW = 10;  // the 1 s word plays over 10 s on screen
+const SLOWDOWN = 100;  // tone frequencies are shown 100 times lower: 200 Hz looks like 2 waves a second
 /* ---------- 1. colour tokens read from CSS ---------- */
 let C = {};
 function readTheme() {
@@ -29,7 +34,7 @@ const TXT = {
       simp2:"Slowed down; sizes are illustrative", acou:"acoustic · air pressure", elec:"electrical · voltage",
       sound:"sound →", plate:"backplate", form:"pressure → electrical signal",
       mic:"membrane", volt:"voltage", cont:"continuous signal", samp:"samples",
-      sampN:"sample #", stime:"time:", sval:"value:", bit16:"(16-bit)", pick:"click a point", hover:"hover over the graph", nSamp:"samples",
+      sampN:"sample #", stime:"time:", sval:"value:", bit16:"(16-bit)", pick:"click a point", hover:"hover over the graph", nSamp:"samples", parts:"what the wave is made of",
       ms:"ms", sec:"s", onems:"1 ms = 16 samples", oneSec:"1 second = 16,000 numbers", frame:"frame", hann:"Hann window",
       raw:"raw", win:"windowed", mel:"32 mel bands", mf:"13 MFCC", mat:"97 × 13 matrix", low:"low", high:"high" }
   },
@@ -50,7 +55,7 @@ const TXT = {
       simp2:"Rallentato; dimensioni indicative", acou:"acustico · pressione dell'aria", elec:"elettrico · tensione",
       sound:"suono →", plate:"piastra fissa", form:"pressione → segnale elettrico",
       mic:"membrana", volt:"tensione", cont:"segnale continuo", samp:"misure",
-      sampN:"misura n. ", stime:"tempo:", sval:"valore:", bit16:"(16 bit)", pick:"clicca su un punto", hover:"passa il mouse sul grafico", nSamp:"misure",
+      sampN:"misura n. ", stime:"tempo:", sval:"valore:", bit16:"(16 bit)", pick:"clicca su un punto", hover:"passa il mouse sul grafico", nSamp:"misure", parts:"di cosa è fatta l'onda",
       ms:"ms", sec:"s", onems:"1 ms = 16 misure", oneSec:"1 secondo = 16 000 numeri", frame:"frame", hann:"finestra di Hann",
       raw:"originale", win:"dopo la finestra", mel:"32 bande mel", mf:"13 MFCC", mat:"matrice 97 × 13", low:"basse", high:"alte" }
   }
@@ -214,6 +219,7 @@ function trace(fn, ta, tb, X0, X1, yc, amp) {
 const SEQ1 = [["", .6, ""]];
 for (const [k, d, gap] of [["t", 1, .3], ["a", 1.2, .5], ["m", 1.2, .5]]) { SEQ1.push(["", .8, k]); for (let r = 0; r < 3; r++) SEQ1.push([k, d, k], ["", gap, k]); }
 SEQ1.push(["", .4, "*"], ["t", 1, "*"], ["", .3, "*"], ["a", 1.2, "*"], ["", .3, "*"], ["m", 1.2, "*"], ["", .8, "*"]);
+// Without tones_stft.json (it did not load) the scenes keep these synthetic timelines and formulas.
 // Scene 2: t, a and m for 4 s each; a long "t" repeats its burst every T_BURST
 const SEQ2 = [["", .6], ["t", 4], ["", .4], ["a", 4], ["", .4], ["m", 4], ["", .4]];
 const T_BURST = 4 / 3;
@@ -223,10 +229,17 @@ function timeline(seq) {
   for (const [k, d, lit = k] of seq) { SEG.push({ k, s, d, prev, lit }); s += d; if (k) prev = k; }
   return { SEG, END: s, at: t => { for (let i = SEG.length - 1; i >= 0; i--) if (t >= SEG[i].s) return SEG[i]; return SEG[0]; } };
 }
-const TL1 = timeline(SEQ1), TL2 = timeline(SEQ2), SEG1 = TL1.SEG, SEQ1_END = TL1.END, segAt = TL1.at;
-const ALL1 = SEG1.find(sg => sg.lit === "*").s; // scene 1: when the whole word starts
+let TL1, TL2, SEG1, SEQ1_END, ALL1; // set by setTimelines()
+const segAt = t => TL1.at(t);
 const zone1 = k => { const z = SEG1.filter(sg => sg.lit === k); return [z[0].s, z[z.length - 1].s + z[z.length - 1].d]; }; // a letter's stretch
-DUR[0] = SEQ1_END;
+// With the recording: a short lead-in, then the word itself, slowed down; t, a and m are its stretches from TIMES
+const LEAD = .6, CMP1 = 4.5; // CMP1: how long scene 1 shows the three waves side by side at the end
+function wordSeq() {
+  const out = [["", LEAD, ""]]; let at = 0;
+  for (const k of KEYS) { const [a, b] = TIMES[k]; if (a > at) out.push(["", (a - at) * WORD_SLOW, ""]); out.push([k, (b - a) * WORD_SLOW, k]); at = b; }
+  out.push(["", (1 - at) * WORD_SLOW + .4, ""]);
+  return out;
+}
 const segFace = s => (s.k === "t" ? "t" : s.k === "a" ? "a" : "m"); // the face frame of a segment: a pause is the closed mouth
 
 // Each sound's parameters, shared by scenes 1 and 2: amplitude A, angular frequency w (slowed down, illustrative) and its
@@ -239,11 +252,47 @@ const VN = new Float32Array(256);
 { let s = 99; for (let i = 0; i < 256; i++) { s = (s * 16807) % 2147483647; VN[i] = s / 2147483647 * 2 - 1; } }
 function vnoise(x) { const i = Math.floor(x), f = x - i, a = VN[i & 255], b = VN[(i + 1) & 255], u = f * f * (3 - 2 * f); return a + (b - a) * u; }
 
+// The recorded word: up to 5 tones per STFT frame (Hann window of win samples, hop samples apart).
+// signal(tReal) = Σ over the frames j covering tReal of w(tReal − tj) · Σ a·cos(2π·f·k·(tReal − tj) + phase),
+// w = the Hann window; two frames overlap at any moment and their windows add up to 1. k = 1 is the real sound with the
+// measured phases. On screen k = SCREEN_K (frequencies / SLOWDOWN while time runs WORD_SLOW times slower), and each tone's
+// phase is carried on from the matching tone of the frame before, so the slowed-down wave stays smooth.
+let WORD = null, NORM = 1; // WORD: { sr, win, hop, frames: [[f, a, phase, screen phase], ...] }; NORM: the screen peak → 1
+const SCREEN_K = WORD_SLOW / SLOWDOWN;
+function signal(tReal, k = 1) {
+  if (!WORD || !(tReal >= 0 && tReal < 1)) return 0;
+  const { sr, win, hop, frames } = WORD, W0 = win / sr, H0 = hop / sr;
+  let v = 0;
+  for (let j = Math.max(0, Math.floor((tReal - W0) / H0) + 1), j1 = Math.min(frames.length - 1, Math.floor(tReal / H0)); j <= j1; j++) {
+    const x = tReal - j * H0; if (x >= W0) continue;
+    const w = .5 - .5 * Math.cos(2 * Math.PI * x / W0);
+    for (const [f, a, p, ps] of frames[j]) v += w * a * Math.cos(2 * Math.PI * f * k * x + (k === 1 ? p : ps));
+  }
+  return v;
+}
+const wordScreen = t => NORM * signal(t / WORD_SLOW, SCREEN_K); // t: screen seconds from the word's start
+function useTones(d) {
+  const H0 = d.hop / d.sr; let prev = [];
+  const frames = d.frames.map(fr => {
+    const cur = fr.map(([f, a, p]) => {
+      let best = null; // the tone of the frame before closest in frequency (within 12 %): this tone continues it
+      for (const q of prev) if (Math.abs(q[0] - f) < f * .12 && (!best || Math.abs(q[0] - f) < Math.abs(best[0] - f))) best = q;
+      return [f, a, p, best ? best[3] + Math.PI * (best[0] + f) * SCREEN_K * H0 : p];
+    });
+    prev = cur; return cur;
+  });
+  WORD = { sr: d.sr, win: d.win, hop: d.hop, frames };
+  let m = 0; for (let i = 0; i < 4000; i++) m = Math.max(m, Math.abs(signal(i / 4000, SCREEN_K)));
+  NORM = m ? 1 / m : 1;
+  setTimelines();
+  if (step < 2) { local = 0; man = { k: "", t: .3 }; } // start the word from the beginning
+}
+
 // The source signal at the mouth, sampled at SR1 for a whole timeline, built once per scene: the travelling wave in the air,
 // the arcs and the pressure trace all read this one table, so they always agree. Also the source point (frame coordinates).
 const SR1 = 240, N1 = Math.ceil(30 * SR1);
 const MOUTH = { t: [451, 443], a: [446, 457], m: [457, 428] };
-function buildSource(tl) {
+function buildSource(tl, sig) { // sig: the recorded word for scene time t (null: the synthetic formulas)
   const SRC = new Float32Array(N1), SX = new Float32Array(N1), SY = new Float32Array(N1);
   let ph = 0, A = 0, w = SOUNDS.t.w, m0 = 0, m1 = 0, m2 = 0, px = MOUTH.m[0], py = MOUTH.m[1];
   let seg = null, from = null;
@@ -266,14 +315,43 @@ function buildSource(tl) {
     const shT = (.5 * Math.sin(ph) + .3 * Math.sin(1.63 * ph + 1.1) + .25 * Math.sin(2.41 * ph + 2.3) + .35 * vnoise(ph * 1.9)) / 1.1; // noisy
     const shA = (Math.sin(ph) + .45 * Math.sin(2 * ph + .5) + .25 * Math.sin(3 * ph + 1.1)) / 1.45; // 2nd and 3rd harmonics
     const shM = Math.sin(ph); // almost a pure sine
-    SRC[i] = A * (m0 * shT + m1 * shA + m2 * shM);
+    SRC[i] = sig ? sig(t) : A * (m0 * shT + m1 * shA + m2 * shM);
     SX[i] = px; SY[i] = py;
   }
   return { s: SRC, x: SX, y: SY };
 }
-const S1 = buildSource(TL1), S2 = buildSource(TL2);
+let S1, S2;
 function tab(a, t) { const f = t * SR1; if (f <= 0) return a[0]; if (f >= N1 - 1) return a[N1 - 1]; const i = f | 0, k = f - i; return a[i] * (1 - k) + a[i + 1] * k; }
 const src1 = t => (t < 0 ? 0 : tab(S1.s, t)), src2 = t => (t < 0 ? 0 : tab(S2.s, t));
+// both scenes' timelines and source tables: the recorded word if it has loaded, the synthetic sounds otherwise
+function setTimelines() {
+  TL1 = timeline(WORD ? [...wordSeq(), ["", CMP1, "*"]] : SEQ1); TL2 = timeline(WORD ? wordSeq() : SEQ2);
+  SEG1 = TL1.SEG; SEQ1_END = TL1.END; ALL1 = SEG1.find(sg => sg.lit === "*").s; DUR[0] = SEQ1_END;
+  if (WORD) DUR[1] = TL2.END + 1.5; // room for the wave to reach the membrane
+  const sig = WORD ? t => wordScreen(t - LEAD) : null;
+  S1 = buildSource(TL1, sig); S2 = buildSource(TL2, sig);
+}
+setTimelines();
+fetch("tools/tones_stft.json").then(r => r.ok ? r.json() : Promise.reject(r.status)).then(useTones).catch(() => {}); // keeps the formulas on failure
+
+// "what the wave is made of": the current frame's tones as thin lines over the summed wave (toReal: graph time → word time)
+let showTones = false;
+const TONE_COL = () => [C.sig, C.cyan, C.muted, C.ink, alpha(C.sig, .55)];
+function drawTones(map, te, toReal, yc, amp, x0, x1, top) {
+  if (!WORD || !showTones) return;
+  const tr = toReal(te); if (!(tr >= 0 && tr < 1)) return;
+  const H0 = WORD.hop / WORD.sr, j = clamp(Math.floor(tr / H0), 0, WORD.frames.length - 1), tj = j * H0, cols = TONE_COL();
+  const xe = map(te), xs = Math.max(x0, xe - (x1 - x0) * .18); // the last stretch of the trace
+  WORD.frames[j].forEach(([f, a, , ps], i) => {
+    g.beginPath();
+    for (let X = xs; X <= xe; X += 1.5) {
+      const tau = te - (xe - X) / (xe - map(te - 1)) * 1, Y = yc - NORM * a * Math.cos(2 * Math.PI * f * SCREEN_K * (toReal(tau) - tj) + ps) * amp;
+      X === xs ? g.moveTo(X, Y) : g.lineTo(X, Y);
+    }
+    g.strokeStyle = cols[i]; g.lineWidth = 1.2; g.stroke();
+    text(Math.round(f) + " Hz", x1 - 4, top + FS * (1.1 + i * 1.15), { a: "right", mono: true, size: FS * .8, c: cols[i] }); // the legend
+  });
+}
 
 // Neon profile frames, drawn additively; 535 × 640 each.
 const FACE = {};
@@ -493,7 +571,7 @@ function sceneAir(p) {
   if (t < ALL1) {
     g.globalAlpha = 1 - ease(clamp((t - ALL1 + .8) / .8, 0, 1));
     const zone = zone1;
-    const ta = zone("t")[0], span = zone("m")[1] - ta;
+    const ta = WORD ? LEAD : zone("t")[0], span = WORD ? WORD_SLOW : zone("m")[1] - ta; // the whole word, or t … m
     const map = tau => sx + (ex - sx) * (tau - ta) / span, te = clamp(t, ta, ta + span);
     addScrub(sx, ex, Yc - SA - 4, Yc + SA + 4, map(te), X => ta + (X - sx) / (ex - sx) * span);
     for (const k of KEYS) {
@@ -510,6 +588,7 @@ function sceneAir(p) {
     line(sx, Yc, ex, Yc, C.line, 1);
     const g0 = manual ? (man.k ? zone1(man.k)[0] : te) : ta; // where the trace starts
     if (te > g0) trace(src1, g0, te, map(g0), map(te), Yc, SA);
+    drawTones(map, te, tau => (tau - LEAD) / WORD_SLOW, Yc, SA, sx, ex, Yc - SA);
     if (t >= ta && te > g0) glow(C.sig, 8, () => { g.beginPath(); g.arc(map(te), Yc - clamp(src1(te - delay), -1.3, 1.3) * SA, 4, 0, 7); g.fillStyle = C.sig; g.fill(); });
     text(L.pressure, sx, Yc + SA + FS * 1.4);
     g.globalAlpha = 1;
@@ -519,10 +598,13 @@ function sceneAir(p) {
     g.globalAlpha = cmp;
     const gp = 16, pw = (ex - sx - 2 * gp) / 3, ptop = y1 + FS * 2.2, ph = Yc + SA + 4 - ptop; // room for the titles above the panels
     // drawn from scene 2's steady 4 s sounds (the same SOUNDS): one burst, 2.2 s of a and of m
-    KEYS.map(k => TL2.SEG.find(sg => sg.k === k)).map(sg => sg.k === "t" ? [sg.s, sg.s + 1.3] : [sg.s + .6, sg.s + 2.8]).forEach(([a, b], j) => {
+    // recorded word: its t, a and m stretches, each scaled to its own peak to compare shapes; synthetic: scene 2's steady sounds
+    const wins = WORD ? KEYS.map(k => zone1(k)) : KEYS.map(k => TL2.SEG.find(sg => sg.k === k)).map(sg => sg.k === "t" ? [sg.s, sg.s + 1.3] : [sg.s + .6, sg.s + 2.8]);
+    wins.forEach(([a, b], j) => {
       const X = sx + j * (pw + gp);
       rrect(X, ptop, pw, ph, 10); g.fillStyle = C.surface; g.fill(); g.strokeStyle = C.line; g.lineWidth = 1; g.stroke();
-      trace(src2, a, b, X + 10, X + pw - 10, ptop + ph / 2, ph * .4);
+      let pk = 1; if (WORD) { pk = 0; for (let q = a; q <= b; q += .01) pk = Math.max(pk, Math.abs(src1(q))); pk = pk || 1; }
+      trace(WORD ? q => src1(q) / pk : src2, a, b, X + 10, X + pw - 10, ptop + ph / 2, ph * .4);
       text(KEYS[j], X, ptop - 8, { disp: true, size: FS * 1.4, c: col[KEYS[j]] });
       g.font = font(FS * 1.4, 400, false, true); const kw = g.measureText(KEYS[j] + " ").width;
       text("· " + L.cmp[KEYS[j]][0], X + kw, ptop - 8, { c: C.ink, w: 600, max: pw - kw });
@@ -583,7 +665,7 @@ function sceneMic(p) {
   text(L.plate, Xp + 4, hy0 - 10, { c: C.ink, w: 600 });
 
   // voltage: one point per frame = the membrane's displacement (plus a very small noise), drawn left to right
-  const X0 = W * .56, X1 = W - pad, A2 = bandH * .55, ta = TL2.SEG[1].s + delay, tb = TL2.END + delay;
+  const X0 = W * .56, X1 = W - pad, A2 = bandH * .55, ta = (WORD ? LEAD : TL2.SEG[1].s) + delay, tb = (WORD ? LEAD + WORD_SLOW : TL2.END) + delay;
   const map = tau => X0 + (X1 - X0) * (tau - ta) / (tb - ta);
   addScrub(X0, X1, yc - A2 - 6, yc + A2 + 6, map(clamp(t, ta, tb)), X => ta + (X - X0) / (X1 - X0) * (tb - ta));
   if (Math.abs(t - vrLast) > .25) { vrHead = 0; vrCount = 0; vrLast = -1; } // a jump (seeking): start the graph again
@@ -613,6 +695,7 @@ function sceneMic(p) {
     glow(C.cyan, 11, () => { g.strokeStyle = C.acc; g.lineWidth = 2; g.stroke(); });
     glow(C.sig, 8, () => { g.beginPath(); g.arc(lx, ly, 4, 0, 7); g.fillStyle = C.sig; g.fill(); });
   }
+  drawTones(map, clamp(t, ta, tb), tau => (tau - delay - LEAD) / WORD_SLOW, yc, A2, X0, X1, yc - A2);
 
   text(L.form, W / 2, hy1 + FS * 3.4, { a: "center", c: C.ink, w: 600 });
   const now = here || "pause";
@@ -846,6 +929,8 @@ const PICON = {
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>'
 };
 function syncPlay() { playBtn.innerHTML = PICON[playing ? "pause" : "play"]; const l = playing ? "Pause" : "Play"; playBtn.setAttribute("aria-label", l); playBtn.title = l; }
+const tonesBtn = document.getElementById("tones");
+tonesBtn.addEventListener("click", () => { showTones = !showTones; tonesBtn.setAttribute("aria-pressed", String(showTones)); });
 function togglePlay() { playing = !playing; if (playing && local >= DUR[step]) local = 0; syncPlay(); }
 playBtn.addEventListener("click", togglePlay);
 syncPlay();
@@ -974,7 +1059,7 @@ function drawTitle() {
 }
 function drawBand(p) {
   const y = VH - INSET - BTN / 2;
-  if (FOOT[step]) text(TXT[lang].L.simp2, INSET, y, { b: "middle", c: C.muted, size: FS * .85, max: W - 2 * INSET - 56 }); // clear of the mode switch
+  if (FOOT[step]) text(TXT[lang].L.simp2, INSET, y, { b: "middle", c: C.muted, size: FS * .85, max: W - 2 * INSET - (tonesBtn.hidden ? 56 : 104) }); // clear of the buttons on the right
   if (step === 3) text(TXT[lang].L.oneSec, INSET, y, { b: "middle", c: C.ink, w: 600 }); // scene 4: its caption in the bottom-left corner
   if (step === 2 && SAMP) { // scene 3: the 1 ms bracket in the bottom-left corner, at the graph's scale (16 samples wide)
     const b0 = INSET, b1 = INSET + (SAMP.X1 - SAMP.X0) * 16 / (SAMP.K - 1);
@@ -992,6 +1077,9 @@ function frame(now) {
   if (scrub) {} // a playhead is being dragged: time follows the pointer only
   else if (playing && step === 0 && manual) { clock += dt * speed; if (man.k) man.t = Math.min(man.t + dt * speed, zone1(man.k)[1] - .01); } // holds at the end, silent
   else if (playing) { local += dt * speed; clock += dt * speed; if (local >= DUR[step]) { if (step === 0) local -= DUR[0]; else go(step + 1); } } // scene 1 loops until → is pressed
+  const tonesOn = !!WORD && step < 2; // the tones button: scenes 1 and 2, with the recorded word
+  if (tonesBtn.hidden === tonesOn) tonesBtn.hidden = !tonesOn;
+  if (tonesBtn.title !== TXT[lang].L.parts) { tonesBtn.title = TXT[lang].L.parts; tonesBtn.setAttribute("aria-label", TXT[lang].L.parts); }
   if (modeBtn.hidden !== (step !== 0)) { modeBtn.hidden = step !== 0; playBtn.hidden = step === 0; } // mode switch on page 1, play / pause elsewhere
   const p = clamp((step === 0 && manual ? man.t : local) / DUR[step], 0, 1);
   g.fillStyle = C.bg; g.fillRect(0, 0, W, VH);

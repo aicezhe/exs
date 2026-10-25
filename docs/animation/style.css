@@ -21,7 +21,7 @@ canvas{display:block;width:100vw;height:100vh;touch-action:none} /* touch drags 
 /* Scene controls (same on every page): ← and → at the top corners beside the title, the mode switch at the bottom right */
 .controls{display:contents}
 /* all four corner elements (←, →, the footnote drawn in main.js, the mode switch) sit 16px from their corners */
-.controls #prev,.controls #next,.controls #mode,.controls #play{position:fixed}
+.controls #prev,.controls #next,.controls #mode,.controls #play,.controls #tones{position:fixed}
 .controls #prev{top:16px;left:16px}
 .controls #next{top:16px;right:16px}
 .controls #mode,.controls #play{bottom:16px;right:16px} /* the same corner: mode on page 1, play / pause on the others */
@@ -30,7 +30,7 @@ canvas{display:block;width:100vw;height:100vh;touch-action:none} /* touch drags 
 .controls button:hover{border-color:var(--signal)}
 .controls button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 /* scene 1 mode switch: auto (loop) / manual (click a letter) */
-.controls #mode svg,.controls #play svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.controls #mode svg,.controls #play svg,.controls #tones svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .controls #mode[aria-pressed="true"]{color:var(--signal);border-color:var(--signal)}
 .controls button[hidden]{display:none}
 
@@ -39,3 +39,7 @@ canvas{display:block;width:100vw;height:100vh;touch-action:none} /* touch drags 
 .seg:hover{background:rgba(255,255,255,.05)}
 .seg:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .seg[hidden]{display:none}
+
+/* "what the wave is made of": left of the bottom-right button, pink while on */
+.controls #tones{bottom:16px;right:64px}
+.controls #tones[aria-pressed="true"]{color:var(--signal);border-color:var(--signal)}
