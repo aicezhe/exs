@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 3 · Clips</title>
+<style>
+  :root {
+    --bg0: #030720;
+    --bg1: #0a1650;
+    --link: #3b7bff;
+    --pink: #ff4fa3;
+    --setting: #9db8ff;
+    --ink: #e8eeff;
+    --muted: #8fa0d6;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  /* touch-action: none, so a finger drag on the graph moves the window instead of scrolling the page */
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud { position: fixed; pointer-events: none; z-index: 2; }
+  .hud.tl { top: 28px; left: 32px; }
+  .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
+  /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
+    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: border-color .2s, color .2s; }
+  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
+  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .sub { font-size: 14px; color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+
+  /* step caption and the step controls, bottom centre */
+  #cap { position: fixed; z-index: 2; left: 50%; bottom: 86px; transform: translateX(-50%); width: min(660px, calc(100vw - 32px));
+    text-align: center; font-size: 14.5px; line-height: 1.45; color: var(--ink); pointer-events: none; min-height: 21px; }
+  #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
+  #nav button, #tools button { font: inherit; color: var(--ink); background: rgba(8, 16, 64, .72); border: 1px solid rgba(143, 160, 214, .4);
+    cursor: pointer; display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px);
+    transition: border-color .2s, box-shadow .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible, #tools button:hover, #tools button:focus-visible { border-color: var(--pink); outline: none; }
+  #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; border-color: rgba(255, 79, 163, .7) !important;
+    box-shadow: 0 0 22px rgba(255, 79, 163, .25); }
+  #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
+  #dots { display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
+  #dots i.on { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink); }
+
+  /* the buttons of step 2 (Auto, Add a loud click), just above the caption */
+  #tools { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); display: none; gap: 10px; white-space: nowrap; }
+  #tools.on { display: flex; }
+  #tools button { height: 38px; padding: 0 18px; border-radius: 19px; font-size: 14px; }
+  #auto { border-color: rgba(255, 79, 163, .7) !important; box-shadow: 0 0 16px rgba(255, 79, 163, .22); }
+
+  #card {
+    position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
+    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    backdrop-filter: blur(6px); pointer-events: none;
+    opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
+  }
+  #card.on { opacity: 1; transform: none; }
+  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
+  #card.quiet { border-color: rgba(143, 160, 214, .5); box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
+  #card.setting .tag { color: var(--setting); }
+  #card.quiet .tag { color: var(--muted); }
+  #card h2 { margin: 6px 0 10px; font: 600 22px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
+  #card.setting h2 { color: var(--setting); }
+  #card.quiet h2 { color: var(--ink); }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
+    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card p { margin: 0; font-size: 14.5px; line-height: 1.5; }
+  @media (max-width: 700px) {
+    #card { left: 16px !important; right: 16px; top: auto !important; bottom: 100px; width: auto; }
+    .hud.tl { left: 16px; top: 18px; }
+    .hud.bl { display: none; }
+    #cap { font-size: 13px; bottom: 80px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #card, #nav button, #tools button { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Clips: every recording is forced to exactly 1 second"></canvas>
+
+<div class="hud tl" id="hud">
+  <a class="back" href="../#how">← all blocks</a>
+  <div class="kicker">Block 3 of 12</div>
+  <h1>Clips</h1>
+  <div class="sub">notebook cell 2 · tap or drag</div>
+</div>
+<div class="hud bl">
+  <span><i class="dot" style="background:#ff4fa3;box-shadow:0 0 8px #ff4fa3"></i>signal</span>
+  <span><i class="dot" style="background:#9db8ff;box-shadow:0 0 8px #9db8ff"></i>1 s window</span>
+  <span><i class="dot" style="background:#4f9dff"></i>zeros: silence</span>
+</div>
+
+<div id="cap" aria-live="polite"></div>
+<div id="tools">
+  <button id="auto" type="button">Auto</button>
+  <button id="click" type="button">Add a loud click</button>
+</div>
+<nav id="nav" aria-label="Steps">
+  <button id="prev" type="button" aria-label="Previous step">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next step">→</button>
+</nav>
+<div id="card" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   CONSTANTS. N_CLIPS is a placeholder: put the number from the
+   notebook here. The signals are synthetic (illustrative only) and
+   are drawn at DRAW_RATE samples per second, not at SAMPLE_RATE.
+------------------------------------------------------------------ */
+const SAMPLE_RATE = 16000;
+const CLIP_SECONDS = 1.0;
+const N_SAMPLES = SAMPLE_RATE * CLIP_SECONDS;
+const N_CLIPS = 24;
+const DRAW_RATE = 800;                       // drawn samples per second
+const N_WIN = Math.round(DRAW_RATE * CLIP_SECONDS); // window length in drawn samples
+
+const CAPTIONS = [
+  'load_clip: resample to 16 kHz, mono. Then every clip is forced to exactly 1 s.',
+  'Prefix sums give the energy of every window in one pass.',
+  'np.pad adds zeros at the end, so the word is always at the start of short clips.',
+  'Audio array: (N, 16000)',
+];
+const CODE = ['cs = cumsum(y**2)', 'energy = cs[N:] - cs[:-N]', 'start = argmax(energy)'];
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mix = (a, b, t) => a + (b - a) * t;
+
+const COL = { sig: '#ff4fa3', frame: '#9db8ff', zero: '#4f9dff', muted: '#8fa0d6', ink: '#e8eeff', gray: '#6f7aa8' };
+
+/* ------------------------------------------------------------------
+   Synthetic signals: a smooth burst (a few sines under a bell-shaped
+   envelope, with a slow syllable ripple) plus weak noise. Fixed seeds.
+------------------------------------------------------------------ */
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const SIGMA = 0.16;      // width of the word burst, seconds
+const WORD_AMP = 0.4;
+function makeClip(seconds, center, seed, amp = WORD_AMP, noise = 0.03) {
+  const rng = makeRng(seed), n = Math.round(seconds * DRAW_RATE), y = new Float32Array(n);
+  const ph = [rng() * 6.28, rng() * 6.28, rng() * 6.28];
+  for (let i = 0; i < n; i++) {
+    const t = i / DRAW_RATE, u = (t - center) / SIGMA, env = Math.exp(-0.5 * u * u);
+    const body = .6 * Math.sin(6.283 * 9 * t + ph[0]) + .3 * Math.sin(6.283 * 17 * t + ph[1]) + .2 * Math.sin(6.283 * 26 * t + ph[2]);
+    const ripple = .6 + .4 * Math.sin(6.283 * 3.2 * (t - center) + 1);
+    y[i] = amp * env * ripple * body / .6 * 0.7 + (rng() - .5) * 2 * noise;
+  }
+  return y;
+}
+
+// the four recordings of step 1 (same time scale), the long one is used in step 2, the short one in step 3
+const RECS = [
+  { sec: 0.6, c: 0.26, seed: 11 }, { sec: 1.0, c: 0.50, seed: 23 },
+  { sec: 1.8, c: 0.95, seed: 37 }, { sec: 2.5, c: 1.70, seed: 45 },
+].map(r => ({ ...r, y: makeClip(r.sec, r.c, r.seed) }));
+const LONG = RECS[3], SHORT = RECS[0];
+
+// the loud click that can be added to the long recording
+const CLICK = { t: 0.45, amp: 1.0, tau: 0.045, f: 70 };
+const CLICK_ARR = new Float32Array(LONG.y.length);
+for (let i = 0; i < CLICK_ARR.length; i++) {
+  const d = i / DRAW_RATE - CLICK.t;
+  CLICK_ARR[i] = d < 0 ? 0 : CLICK.amp * Math.exp(-d / CLICK.tau) * Math.sin(6.283 * CLICK.f * d);
+}
+
+// energy of every window of the long recording: the same three lines as the code on the page
+const E = { sig: new Float32Array(LONG.y.length), cs: new Float64Array(LONG.y.length + 1), e: new Float64Array(LONG.y.length - N_WIN + 1), arg: 0, max: 1 };
+function rebuild(clickAmt) {
+  const { sig, cs, e } = E;
+  for (let i = 0; i < sig.length; i++) { sig[i] = LONG.y[i] + clickAmt * CLICK_ARR[i]; cs[i + 1] = cs[i] + sig[i] * sig[i]; }
+  let best = 0;
+  for (let i = 0; i < e.length; i++) { e[i] = cs[i + N_WIN] - cs[i]; if (e[i] > e[best]) best = i; }
+  E.arg = best; E.max = e[best];
+}
+rebuild(0);
+const energyAt = s => { const f = clamp(s * DRAW_RATE, 0, E.e.length - 1), i = Math.floor(f), j = Math.min(E.e.length - 1, i + 1); return mix(E.e[i], E.e[j], f - i); };
+
+// quick-check signals (1 s each)
+const CHECKS = [
+  { k: 'good', label: 'good', ok: true, y: makeClip(1, .5, 71, .9, .02) },
+  { k: 'clipped', label: 'clipped', ok: false, y: makeClip(1, .5, 72, .9, .02).map(v => clamp(v * 3.2, -1, 1)) },
+  { k: 'flat', label: 'flat', ok: false, y: new Float32Array(DRAW_RATE) },
+  { k: 'quiet', label: 'too quiet', ok: false, y: makeClip(1, .5, 73, .035, .004) },
+];
+const CHECK_TEXT = {
+  good:    'The word sits in the middle of the clip. The shape is clear and nothing is cut off.',
+  clipped: 'The peaks are flat at ±1: the signal was cut off, so the shape of the word is lost.',
+  flat:    'No signal at all: an empty or broken file.',
+  quiet:   'The amplitude is tiny: the word is hard to tell from the noise.',
+};
+const rngRows = makeRng(5);
+const ROW_C = Array.from({ length: N_CLIPS }, () => .3 + .4 * rngRows());   // where the bright patch of each row sits
+
+/* ------------------------------------------------------------------
+   Setup
+------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const cv = $('c'), ctx = cv.getContext('2d');
+const card = $('card'), hudEl = $('hud'), capEl = $('cap'), toolsEl = $('tools');
+const prevBtn = $('prev'), nextBtn = $('next'), autoBtn = $('auto'), clickBtn = $('click');
+const dots = [...document.querySelectorAll('#dots i')];
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+const ease = u => 1 - Math.pow(1 - u, 3);
+const easeIO = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+
+let W = 0, H = 0, DPR = 0, narrow = false, fs = 14.5, step = 0, stepT0 = 0, now = 0;
+const L = {};
+const A = { s: [1, 0, 0, 0], click: 0, emax: E.max * 1.08 };   // step fades, click fade, energy axis
+const S1 = { ws: 0.15, drag: false, dx: 0, auto: null, line: -1, locked: false, clickOn: false, moved: 0, downX: 0, downY: 0 };
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function T(t, x, y, col, size, align = 'left', a = 1) {
+  ctx.globalAlpha = a; ctx.fillStyle = col; ctx.font = `${size}px ${MONO}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.fillText(t, x, y); ctx.globalAlpha = 1;
+}
+const prog = (dur, delay = 0) => reduce ? 1 : ease(clamp((now - stepT0 - delay) / dur, 0, 1));
+
+// a waveform as one vertical min/max bar per pixel column; samples [i0, i1) of arr, t = 0 at x0
+function wavePath(arr, x0, pps, yc, half, i0 = 0, i1 = arr.length) {
+  const spp = DRAW_RATE / pps, xa = x0 + i0 / DRAW_RATE * pps, xb = x0 + i1 / DRAW_RATE * pps;
+  ctx.beginPath();
+  for (let px = Math.floor(xa); px <= Math.ceil(xb); px++) {
+    const s0 = Math.max(i0, Math.floor((px - x0) * spp)), s1 = Math.min(i1, arr.length, Math.ceil((px + 1 - x0) * spp) + 1);
+    if (s1 <= s0) continue;
+    let mn = 1e9, mx = -1e9;
+    for (let s = s0; s < s1; s++) { const v = arr[s]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    const ya = yc - mx * half, yb = yc - mn * half;
+    ctx.moveTo(px + .5, ya); ctx.lineTo(px + .5, Math.max(yb, ya + 1));
+  }
+}
+function strokeWave(arr, x0, pps, yc, half, col, lw, i0, i1, glow) {
+  wavePath(arr, x0, pps, yc, half, i0, i1);
+  ctx.strokeStyle = col; ctx.lineWidth = lw;
+  if (glow) { ctx.shadowColor = col; ctx.shadowBlur = glow; }
+  ctx.stroke(); ctx.shadowBlur = 0;
+}
+
+/* ------------------------------------------------------------------
+   Layout (recomputed on resize and on every step: the caption height changes)
+------------------------------------------------------------------ */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (innerWidth === W && innerHeight === H && dpr === DPR) return;
+  W = innerWidth; H = innerHeight; DPR = dpr;
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function layout() {
+  resize();
+  narrow = W < 700; fs = narrow ? 12.5 : 14.5;
+  const hudB = hudEl.getBoundingClientRect().bottom, capTop = capEl.getBoundingClientRect().top;
+  toolsEl.style.bottom = (H - capTop + 8) + 'px';
+  L.capTop = capTop; L.toolsTop = capTop - 8 - 38;
+  const pad = narrow ? 16 : 32, cw = Math.min(W - 2 * pad, 1100), x0 = (W - cw) / 2, top = hudB + 10;
+  Object.assign(L, { pad, cw, x0, top });
+  L.g = [geo0(x0, cw, top, capTop - 10), geo1(x0, cw, top, L.toolsTop - 8), geo2(x0, cw, top, capTop - 10), geo3(x0, cw, top, capTop - 10)];
+}
+
+// step 1: four recordings, one time scale, one fixed 1 s frame
+function geo0(x0, cw, y0, y1) {
+  const pps = cw / 2.5, hh = y1 - y0 - 26, rowH = hh / 4;
+  const rows = RECS.map((r, i) => { const t = y0 + 26 + i * rowH; return { top: t, h: rowH, yc: t + 16 + (rowH - 16) / 2, half: (rowH - 16) * .48, rec: r }; });
+  return { x0, pps, y0, y1, rows, frame: { x: x0, y: y0 + 2, w: pps * CLIP_SECONDS, h: y1 - y0 - 2 } };
+}
+// step 2: the long recording, the energy curve, the code
+function geo1(x0, cw, y0, y1) {
+  const ln = narrow ? 20 : 24, fixed = 18 + 16 + 18 + 6 + 16 + 10 + (3 * ln + 4) + 10;
+  const avail = Math.max(120, y1 - y0 - fixed), wh = Math.min(190, avail * .52), eh = Math.min(150, avail - wh);
+  let y = y0; const g = { x0, pps: cw / 2.5, ln, cw };
+  g.titleY = y + 9; y += 18; g.wy0 = y; g.wy1 = y + wh; g.wyc = y + wh / 2; g.half = wh / 2 * .86; y += wh;
+  g.tickY = y + 9; y += 16; g.noteY = y + 9; y += 18 + 6; g.etitleY = y + 8; y += 16;
+  g.ey0 = y; g.ey1 = y + eh; y += eh + 10; g.codeY0 = y; g.y1 = y1;
+  return g;
+}
+// step 3: the short recording and its padding
+function geo2(x0, cw, y0, y1) {
+  const pps = cw / 1.1, h = y1 - y0, wh = clamp(h * .5, 100, 220), off = Math.max(0, (h - (wh + 80)) * .4), yc = y0 + 34 + off + wh / 2;
+  return { x0, pps, yc, half: wh / 2 * .9, fy0: y0 + 6 + off, fy1: y0 + 34 + wh + 40 + off, y0 };
+}
+// step 4: the matrix and the quick check
+function geo3(x0, cw, y0, y1) {
+  const wide = cw >= 760, h = y1 - y0, g = { wide };
+  if (wide) {
+    const mw = Math.round(cw * .46), idx = 30;
+    g.mx = x0 + idx; g.mw = mw - idx; g.my = y0 + 34; g.mh = Math.min(h - 50, N_CLIPS * 20); g.gap = 2;
+    const qx = x0 + mw + 50, qw = x0 + cw - qx, cwid = (qw - 14) / 2, chei = Math.min(140, (g.mh - 14) / 2);
+    g.qTitle = { x: qx, y: g.my - 14 };
+    g.cells = CHECKS.map((c, i) => ({ c, x: qx + (i % 2) * (cwid + 14), y: g.my + Math.floor(i / 2) * (chei + 14), w: cwid, h: chei }));
+  } else {
+    const idx = 24;
+    g.mx = x0 + idx; g.mw = cw - idx; g.my = y0 + 30; g.mh = Math.min((h - 30) * .46, N_CLIPS * 9); g.gap = 1;
+    const qy = g.my + g.mh + 40, cwid = (cw - 3 * 8) / 4, chei = clamp(y1 - qy, 56, 92);
+    g.qTitle = { x: x0, y: qy - 14 };
+    g.cells = CHECKS.map((c, i) => ({ c, x: x0 + i * (cwid + 8), y: qy, w: cwid, h: chei }));
+  }
+  g.rowH = (g.mh - (N_CLIPS - 1) * g.gap) / N_CLIPS;
+  return g;
+}
+
+/* ------------------------------------------------------------------
+   Steps
+------------------------------------------------------------------ */
+let act = null, shownKey = '';
+function setStep(n) {
+  if (n === step || n < 0 || n > 3) return;
+  step = n; act = null; shownKey = ''; card.classList.remove('on'); stepT0 = performance.now();
+  S1.drag = false;
+  if (reduce) A.s = A.s.map((_, i) => i === n ? 1 : 0);
+  syncUI(); layout();
+}
+function syncUI() {
+  capEl.textContent = CAPTIONS[step];
+  dots.forEach((d, i) => d.classList.toggle('on', i === step));
+  prevBtn.disabled = step === 0; nextBtn.disabled = step === 3;
+  toolsEl.classList.toggle('on', step === 1);
+}
+prevBtn.addEventListener('click', () => setStep(step - 1));
+nextBtn.addEventListener('click', () => setStep(step + 1));
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') setStep(step + 1);
+  else if (e.key === 'ArrowLeft') setStep(step - 1);
+  else if (e.key === 'Escape') act = null;
+});
+
+function runAuto() {
+  act = null;
+  if (reduce) { S1.ws = E.arg / DRAW_RATE; S1.line = 2; S1.locked = true; S1.auto = null; return; }
+  S1.auto = { t0: performance.now(), from: S1.ws }; S1.line = 0; S1.locked = false;
+}
+autoBtn.addEventListener('click', runAuto);
+clickBtn.addEventListener('click', () => {
+  act = null; S1.clickOn = !S1.clickOn; S1.locked = false; if (!S1.auto) S1.line = -1;
+  clickBtn.textContent = S1.clickOn ? 'Remove the click' : 'Add a loud click';
+  if (reduce) { A.click = S1.clickOn ? 1 : 0; rebuild(A.click); A.emax = E.max * 1.08; }
+});
+
+/* ------------------------------------------------------------------
+   Pointer: hover on a mouse, tap on a touch screen; in step 2 a drag
+   moves the 1 s window (mouse and finger, pointer events).
+------------------------------------------------------------------ */
+const pointer = { x: -1e4, y: -1e4, inside: false, type: 'mouse' };
+const setPtr = e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; pointer.type = e.pointerType === 'mouse' ? 'mouse' : 'touch'; };
+
+function dragZone(px, py) {   // where a press starts a drag in step 2: 1 = wave, 2 = energy curve
+  const g = L.g[1];
+  if (px < g.x0 - 8 || px > g.x0 + g.cw + 8) return 0;
+  if (py >= g.wy0 - 6 && py <= g.wy1 + 6) return 1;
+  if (py >= g.ey0 - 6 && py <= g.ey1 + 6) return 2;
+  return 0;
+}
+function dragTo(px) {
+  const g = L.g[1];
+  S1.ws = clamp((px - S1.dx - g.x0) / g.pps, 0, LONG.sec - CLIP_SECONDS);
+}
+cv.addEventListener('pointerdown', e => {
+  setPtr(e); S1.downX = e.clientX; S1.downY = e.clientY; S1.moved = 0;
+  if (step === 1) {
+    act = null;
+    const z = dragZone(e.clientX, e.clientY);
+    if (z) {
+      const g = L.g[1], wx = g.x0 + S1.ws * g.pps, ww = g.pps * CLIP_SECONDS;
+      S1.dx = z === 2 ? 0 : (e.clientX >= wx && e.clientX <= wx + ww ? e.clientX - wx : ww / 2);
+      S1.drag = true; S1.auto = null; S1.line = -1; S1.locked = false;
+      try { cv.setPointerCapture(e.pointerId); } catch (_) { /* not critical */ }
+      dragTo(e.clientX);
+    }
+  } else if (pointer.type === 'touch') act = pick();
+});
+cv.addEventListener('pointermove', e => {
+  setPtr(e);
+  if (S1.drag) { S1.moved = Math.max(S1.moved, Math.hypot(e.clientX - S1.downX, e.clientY - S1.downY)); dragTo(e.clientX); }
+});
+function endDrag(e) {
+  if (!S1.drag) return;
+  S1.drag = false;
+  if (pointer.type === 'touch' && S1.moved < 6) act = pick();      // a tap, not a drag
+}
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') pointer.inside = false; });
+
+/* what is under the pointer: { kind, key, ax, ay0, ay1 (anchor of the card), ... } */
+function pick() {
+  const px = pointer.x, py = pointer.y;
+  if (step === 0) {
+    const g = L.g[0];
+    for (let i = 0; i < g.rows.length; i++) {
+      const r = g.rows[i];
+      if (px >= g.x0 - 4 && px <= g.x0 + r.rec.sec * g.pps + 6 && py >= r.top && py <= r.top + r.h)
+        return { kind: 'rec', key: 'rec' + i, i, ax: g.x0, ay0: r.top, ay1: r.top + r.h };
+    }
+  } else if (step === 1) {
+    const g = L.g[1], a = g.x0 + (RECS[3].c - 2.2 * SIGMA) * g.pps, b = g.x0 + (RECS[3].c + 2.2 * SIGMA) * g.pps;
+    if (px >= a && px <= b && py >= g.wy0 && py <= g.wy1) return { kind: 'word', key: 'word', ax: a, ay0: g.wy0, ay1: g.wy1 };
+  } else if (step === 2) {
+    const g = L.g[2], xa = g.x0 + SHORT.sec * g.pps, xb = g.x0 + g.pps;
+    if (px >= xa && px <= xb && Math.abs(py - g.yc) < 30) return { kind: 'pad', key: 'pad', ax: xa, ay0: g.yc - 20, ay1: g.yc + 20 };
+  } else {
+    const g = L.g[3];
+    if (px >= g.mx && px <= g.mx + g.mw && py >= g.my && py <= g.my + g.mh) {
+      const i = clamp(Math.floor((py - g.my) / (g.rowH + g.gap)), 0, N_CLIPS - 1), y = g.my + i * (g.rowH + g.gap);
+      return { kind: 'row', key: 'row' + i, i, ax: g.mx, ay0: y, ay1: y + g.rowH };
+    }
+    for (const c of g.cells) if (px >= c.x && px <= c.x + c.w && py >= c.y && py <= c.y + c.h) return { kind: 'check', key: 'check' + c.c.k, c: c.c, ax: c.x, ay0: c.y, ay1: c.y + c.h };
+  }
+  return null;
+}
+
+function cardFor(a) {
+  if (a.kind === 'rec') {
+    const s = RECS[a.i].sec, n = Math.round(s * SAMPLE_RATE);
+    return { tag: 'clip length', h2: `${s.toFixed(1)} s × ${SAMPLE_RATE} = ${n} samples`, code: `len(y)  # ${n}`,
+      text: 'Longer than 1 s: keep the loudest window. Shorter: pad with silence.', cls: '' };
+  }
+  if (a.kind === 'word') return { tag: 'why it matters', h2: 'Where the word sits', code: 'start = argmax(energy)',
+    text: 'In training the word sits near the centre. On the board the word can fall anywhere in the window. Time-shift augmentation covers this.', cls: '' };
+  if (a.kind === 'pad') {
+    const n = Math.round(SHORT.sec * SAMPLE_RATE);
+    return { tag: 'zeros: silence', h2: `${N_SAMPLES - n} zeros`, code: 'np.pad(y, (0, N - len(y)))',
+      text: `${n} samples of sound plus ${N_SAMPLES - n} zeros make exactly ${N_SAMPLES} samples.`, cls: 'setting' };
+  }
+  if (a.kind === 'row') return { tag: 'array row', h2: `Row ${a.i}`, code: `audio[${a.i}]  # ${N_SAMPLES} samples`, text: `Row ${a.i} = clip ${a.i} of the table df`, cls: 'setting' };
+  return { tag: 'quick check', h2: a.c.label, code: a.c.ok ? 'looks right' : 'look at it before training', text: CHECK_TEXT[a.c.k], cls: a.c.ok ? 'setting' : '' };
+}
+function showCard() {
+  const key = act ? act.key : '';
+  if (key === shownKey) return; shownKey = key;
+  if (!act) { card.classList.remove('on'); return; }
+  const c = cardFor(act);
+  card.className = c.cls;
+  card.innerHTML = '<div class="tag"></div><h2></h2><code></code><p></p>';
+  card.querySelector('.tag').textContent = c.tag; card.querySelector('h2').textContent = c.h2;
+  card.querySelector('code').textContent = c.code; card.querySelector('p').textContent = c.text;
+  card.classList.add('on');
+}
+function placeCard() {
+  if (narrow) { card.style.left = ''; card.style.top = ''; card.style.bottom = (step === 1 ? H - L.toolsTop + 8 : 100) + 'px'; return; }
+  card.style.bottom = '';
+  const cw = card.offsetWidth, ch = card.offsetHeight, left = clamp(act.ax, 16, W - cw - 16);
+  let top = act.ay1 + 14; if (top + ch > L.capTop - 6) top = act.ay0 - 14 - ch;
+  card.style.left = left + 'px'; card.style.top = Math.max(16, top) + 'px';
+}
+
+/* ------------------------------------------------------------------
+   Drawing
+------------------------------------------------------------------ */
+function frameBox(x, y, w, h, a, dashed) {
+  ctx.save(); ctx.globalAlpha = a; rr(x, y, w, h, 10);
+  ctx.fillStyle = 'rgba(157,184,255,.06)'; ctx.fill();
+  ctx.setLineDash(dashed ? [7, 5] : []); ctx.lineDashOffset = reduce ? 0 : -(now / 70) % 12;
+  ctx.strokeStyle = 'rgba(157,184,255,.75)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
+}
+const note = (x, y, align, a) => T('illustrative signal', x, y, COL.gray, Math.max(10, fs * .78), align, a);
+
+// step 1
+function drawS0(a) {
+  const g = L.g[0], grow = prog(1000), sm = Math.max(10, fs * .8);
+  frameBox(g.frame.x, g.frame.y, g.frame.w, g.frame.h, a, true);
+  T('1 s = 16000 samples', g.frame.x + 8, g.frame.y + 12, COL.frame, sm, 'left', a);
+  g.rows.forEach((r, i) => {
+    const sec = r.rec.sec, wpx = sec * g.pps, hov = act && act.kind === 'rec' && act.i === i, dim = act && act.kind === 'rec' && !hov ? .3 : 1;
+    const u = clamp(grow * 1.4 - i * .12, 0, 1);
+    ctx.globalAlpha = a * dim; ctx.strokeStyle = 'rgba(143,160,214,.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(g.x0, r.yc); ctx.lineTo(g.x0 + wpx * u, r.yc); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(g.x0 - 1, r.top, wpx * u + 2, r.h); ctx.clip(); ctx.globalAlpha = a * dim;
+    strokeWave(r.rec.y, g.x0, g.pps, r.yc, r.half, COL.sig, hov ? 1.7 : 1.15, 0, r.rec.y.length, hov ? 10 : 0);
+    ctx.restore(); ctx.globalAlpha = 1;
+    T(`${sec.toFixed(1)} s`, g.x0 + 2, r.top + 8, hov ? COL.ink : COL.muted, sm + 1, 'left', a * dim);
+    note(g.x0 + g.pps * 2.5, r.top + 8, 'right', a * dim * .9);
+  });
+}
+
+// step 2
+function drawS1(a) {
+  const g = L.g[1], dur = LONG.sec, wx = g.x0 + S1.ws * g.pps, ww = g.pps * CLIP_SECONDS, sm = Math.max(10, fs * .8), aw = g.cw;
+  const wordL = g.x0 + (LONG.c - 2.2 * SIGMA) * g.pps, wordR = g.x0 + (LONG.c + 2.2 * SIGMA) * g.pps;
+  T('recording · 2.5 s', g.x0, g.titleY, COL.muted, sm + 1, 'left', a); note(g.x0 + aw, g.titleY, 'right', a);
+
+  // wave panel
+  ctx.globalAlpha = a; rr(g.x0 - 4, g.wy0, aw + 8, g.wy1 - g.wy0, 10); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(59,123,255,.5)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  // outside the window the wave is dim, inside it is bright
+  ctx.globalAlpha = a * .28; strokeWave(E.sig, g.x0, g.pps, g.wyc, g.half, COL.sig, 1.1, 0, E.sig.length, 0);
+  ctx.save(); ctx.beginPath(); ctx.rect(wx, g.wy0, ww, g.wy1 - g.wy0); ctx.clip(); ctx.globalAlpha = a;
+  strokeWave(E.sig, g.x0, g.pps, g.wyc, g.half, COL.sig, 1.4, 0, E.sig.length, 6); ctx.restore(); ctx.globalAlpha = 1;
+  // time ticks
+  for (let t = 0; t <= dur + .001; t += .5) {
+    const x = g.x0 + t * g.pps; ctx.globalAlpha = a * .5; ctx.strokeStyle = COL.muted; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, g.wy1 + 1); ctx.lineTo(x, g.wy1 + 5); ctx.stroke(); ctx.globalAlpha = 1;
+    if (t % 1 === 0 || !narrow) T(t === 0 ? '0' : `${t}${t % 1 === 0 ? ' s' : ''}`, clamp(x, g.x0 + 8, g.x0 + aw - 12), g.tickY + 2, COL.gray, sm, 'center', a);
+  }
+  // word and click labels
+  const hovWord = act && act.kind === 'word';
+  ctx.globalAlpha = a * (hovWord ? 1 : .8); ctx.strokeStyle = COL.sig; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(wordL, g.wy0 + 18); ctx.lineTo(wordR, g.wy0 + 18); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  T('word', (wordL + wordR) / 2, g.wy0 + 10, COL.sig, sm, 'center', a);
+  if (A.click > .05) T('click', g.x0 + CLICK.t * g.pps, g.wy0 + 10, COL.sig, sm, 'center', a * A.click);
+
+  // the window
+  const lock = S1.locked;
+  ctx.save(); ctx.globalAlpha = a; rr(wx, g.wy0 + 2, ww, g.wy1 - g.wy0 - 4, 8);
+  ctx.fillStyle = 'rgba(157,184,255,.07)'; ctx.fill(); ctx.strokeStyle = lock ? COL.sig : COL.frame; ctx.lineWidth = lock ? 2 : 1.6;
+  ctx.shadowColor = lock ? COL.sig : COL.frame; ctx.shadowBlur = S1.drag || lock ? 14 : 6; ctx.stroke(); ctx.restore();
+  T(lock ? 'locked: loudest window' : '1 s window', wx + 8, g.wy1 - 12, lock ? COL.sig : COL.frame, sm, 'left', a);
+  // grip: three short lines, with a soft pulse until the first drag
+  const gy = g.wyc, gx = wx + ww / 2, pulse = reduce || S1.moved || S1.auto ? 0 : (Math.sin(now / 400) + 1) / 2;
+  ctx.globalAlpha = a * (.55 + .35 * pulse); ctx.strokeStyle = lock ? COL.sig : COL.frame; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(gx + k * 5, gy - 9); ctx.lineTo(gx + k * 5, gy + 9); ctx.stroke(); }
+  ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
+  // the trap note
+  const hasClick = S1.clickOn && A.click > .9, clickIn = hasClick && S1.ws - .08 <= CLICK.t && CLICK.t <= S1.ws + CLIP_SECONDS;
+  if (clickIn && S1.locked) T('Loudest is not always the word.', g.x0 + aw / 2, g.noteY, COL.sig, sm + 1.5, 'center', a);
+
+  // energy panel
+  T('energy of the 1 s window', g.x0, g.etitleY, COL.muted, sm + 1, 'left', a); T('window start →', g.x0 + aw, g.etitleY, COL.gray, sm, 'right', a);
+  const ph = g.ey1 - g.ey0 - 12, ybase = g.ey1 - 6, xr = g.x0 + (dur - CLIP_SECONDS) * g.pps;
+  ctx.globalAlpha = a; rr(g.x0 - 4, g.ey0, aw + 8, g.ey1 - g.ey0, 10); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(59,123,255,.5)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  T('no full window', (xr + g.x0 + aw) / 2 + 4, ybase - ph / 2, COL.gray, sm, 'center', a * .7);
+  const yOf = v => ybase - clamp(v / A.emax, 0, 1.05) * ph;
+  const curve = () => { ctx.beginPath(); ctx.moveTo(g.x0, ybase); for (let px = 0; px <= xr - g.x0; px++) ctx.lineTo(g.x0 + px, yOf(energyAt(px / g.pps))); ctx.lineTo(xr, ybase); };
+  curve(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(59,123,255,.22)'; ctx.fill();
+  ctx.beginPath(); for (let px = 0; px <= xr - g.x0; px++) { const y = yOf(energyAt(px / g.pps)); px ? ctx.lineTo(g.x0 + px, y) : ctx.moveTo(g.x0, y); }
+  ctx.strokeStyle = '#6f9bff'; ctx.lineWidth = 1.8; ctx.stroke(); ctx.globalAlpha = 1;
+  // scan line while "energy = cs[N:] - cs[:-N]" is highlighted
+  if (S1.auto && S1.line === 1) {
+    const u = clamp((now - S1.auto.t0 - 700) / 800, 0, 1), sx = g.x0 + u * (xr - g.x0);
+    ctx.globalAlpha = a * .8; ctx.strokeStyle = COL.sig; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, g.ey0 + 4); ctx.lineTo(sx, ybase); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // the running marker and its number
+  const ev = energyAt(S1.ws), my = yOf(ev);
+  ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(255,79,163,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(wx, g.ey0 + 4); ctx.lineTo(wx, ybase); ctx.stroke();
+  ctx.beginPath(); ctx.arc(wx, my, 5, 0, 6.283); ctx.fillStyle = COL.sig; ctx.shadowColor = COL.sig; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  const right = wx < g.x0 + 1.1 * g.pps;
+  T(`E = ${ev.toFixed(1)}${S1.locked ? ' · max' : ''}`, right ? wx + 10 : wx - 10, clamp(my - 14, g.ey0 + 18, ybase - 8), COL.ink, sm + 1.5, right ? 'left' : 'right', a);
+
+  // code lines, highlighted one after another during Auto
+  ctx.font = `${fs}px ${MONO}`;
+  CODE.forEach((t, i) => {
+    const y = g.codeY0 + i * g.ln + g.ln / 2, on = S1.line === i, w = ctx.measureText(t).width;
+    if (on) { ctx.save(); ctx.globalAlpha = a; rr(g.x0 - 6, y - g.ln / 2 + 2, w + 12, g.ln - 4, 6); ctx.fillStyle = 'rgba(255,79,163,.18)';
+      ctx.shadowColor = COL.sig; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,79,163,.85)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.restore(); }
+    T(t, g.x0, y, on ? COL.ink : COL.muted, fs, 'left', a);
+  });
+}
+
+// step 3
+function drawS2(a) {
+  const g = L.g[2], sm = Math.max(10, fs * .8), n0 = Math.round(SHORT.sec * SAMPLE_RATE), nz = N_SAMPLES - n0;
+  const xe = g.x0 + SHORT.sec * g.pps, xf = g.x0 + g.pps, gw = prog(800), gp = prog(900, 500);
+  frameBox(g.x0, g.fy0, g.pps, g.fy1 - g.fy0, a, true);
+  T('1 s = 16000 samples', g.x0 + 8, g.fy0 + 14, COL.frame, sm, 'left', a); note(g.x0 + g.pps - 8, g.fy0 + 14, 'right', a * .9);
+  ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(143,160,214,.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.x0, g.yc); ctx.lineTo(xe, g.yc); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.save(); ctx.beginPath(); ctx.rect(g.x0 - 1, g.yc - g.half - 6, (xe - g.x0 + 2) * gw, g.half * 2 + 12); ctx.clip(); ctx.globalAlpha = a;
+  strokeWave(SHORT.y, g.x0, g.pps, g.yc, g.half, COL.sig, 1.4, 0, SHORT.y.length, 6); ctx.restore(); ctx.globalAlpha = 1;
+  // the padding grows to the right edge of the frame
+  const xp = mix(xe, xf, gp), hov = act && act.kind === 'pad';
+  if (gp > 0) {
+    ctx.globalAlpha = a; ctx.strokeStyle = COL.zero; ctx.lineWidth = hov ? 3.4 : 2.6; ctx.lineCap = 'round'; ctx.shadowColor = COL.zero; ctx.shadowBlur = hov ? 14 : 8;
+    ctx.beginPath(); ctx.moveTo(xe, g.yc); ctx.lineTo(xp, g.yc); ctx.stroke(); ctx.shadowBlur = 0; ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
+  }
+  // under the wave: how many samples each part holds
+  const by = g.yc + g.half + 22;
+  const brace = (xa, xb, col, t, al) => { ctx.globalAlpha = a * al; ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xa + 2, by - 5); ctx.lineTo(xa + 2, by); ctx.lineTo(xb - 2, by); ctx.lineTo(xb - 2, by - 5); ctx.stroke(); ctx.globalAlpha = 1; T(t, (xa + xb) / 2, by + 14, col, sm, 'center', a * al); };
+  brace(g.x0, xe, COL.sig, `${n0} samples · ${SHORT.sec.toFixed(1)} s`, gw);
+  brace(xe, xf, COL.zero, `${nz} zeros`, clamp((gp - .6) / .4, 0, 1));
+  T('zeros: silence', (xe + xf) / 2, g.yc - 18, COL.zero, sm + 1.5, 'center', a * clamp((gp - .5) / .5, 0, 1));
+}
+
+// step 4
+function drawS3(a) {
+  const g = L.g[3], sm = Math.max(10, fs * .8), hl = act && act.kind === 'row' ? act.i : -1;
+  // header of the matrix: N rows on the left, 16000 columns across
+  T(`N = ${N_CLIPS} rows`, g.mx, g.my - 14, COL.muted, sm + 1, 'left', a); T(`${N_SAMPLES} columns`, g.mx + g.mw, g.my - 14, COL.muted, sm + 1, 'right', a);
+  ctx.globalAlpha = a * .6; ctx.strokeStyle = COL.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.mx, g.my - 5); ctx.lineTo(g.mx + g.mw, g.my - 5); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = a; rr(g.mx - 4, g.my - 3, g.mw + 8, g.mh + 6, 8); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(59,123,255,.55)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  for (let i = 0; i < N_CLIPS; i++) {
+    const p = prog(450, 150 + i * 35), y = g.my + i * (g.rowH + g.gap) + (1 - p) * -26, h = Math.max(2, g.rowH), al = a * p * (hl >= 0 && hl !== i ? .35 : 1);
+    if (al < .01) continue;
+    const gr = ctx.createLinearGradient(g.mx, 0, g.mx + g.mw, 0), c = ROW_C[i], v = (i % 5) * 9;
+    const base = `rgba(${79 + v},${111 - v},${192},.45)`;
+    gr.addColorStop(0, base); gr.addColorStop(clamp(c - .16, 0, 1), base); gr.addColorStop(c, 'rgba(255,79,163,.95)'); gr.addColorStop(clamp(c + .16, 0, 1), base); gr.addColorStop(1, base);
+    ctx.globalAlpha = al; ctx.fillStyle = gr; rr(g.mx, y, g.mw, h, Math.min(3, h / 2)); ctx.fill();
+    if (hl === i) { ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.4; ctx.shadowColor = COL.sig; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0; }
+    ctx.globalAlpha = 1;
+    const every = g.rowH >= 14 ? 1 : 6;
+    if (i % every === 0 || i === N_CLIPS - 1) T(String(i), g.mx - 8, y + h / 2, hl === i ? COL.ink : COL.gray, sm, 'right', al);
+  }
+  // quick check
+  const qa = a * prog(500, 400);
+  T('Quick check', g.qTitle.x, g.qTitle.y, COL.muted, sm + 1, 'left', qa); T('illustrative signals', g.qTitle.x + (g.cells[0].w * (g.wide ? 2 : 4)) + (g.wide ? 14 : 24), g.qTitle.y, COL.gray, Math.max(10, fs * .78), 'right', qa);
+  g.cells.forEach(c => {
+    const hov = act && act.kind === 'check' && act.c === c.c, dim = act && act.kind === 'check' && !hov ? .4 : 1, ph = c.h - 18, col = c.c.ok ? COL.frame : COL.sig;
+    ctx.globalAlpha = qa * dim; rr(c.x, c.y, c.w, ph, 8); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = hov ? col : 'rgba(59,123,255,.5)'; ctx.lineWidth = hov ? 1.6 : 1.1; ctx.stroke();
+    // the ±1 limits and the zero line
+    ctx.strokeStyle = 'rgba(143,160,214,.25)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    const yc = c.y + ph / 2, half = ph / 2 * .86;
+    [-1, 0, 1].forEach(k => { ctx.beginPath(); ctx.moveTo(c.x + 4, yc + k * half); ctx.lineTo(c.x + c.w - 4, yc + k * half); ctx.stroke(); });
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.save(); ctx.globalAlpha = qa * dim; strokeWave(c.c.y, c.x + 4, c.w - 8, yc, half, col, 1.2, 0, c.c.y.length, 0); ctx.restore();
+    T((c.c.ok ? '✓ ' : '✗ ') + c.c.label, c.x + 2, c.y + c.h - 7, col, sm, 'left', qa * dim);
+  });
+}
+
+let last = 0;
+function frame(ts) {
+  const t = ts / 1000, dt = Math.min(.05, last ? t - last : .016); last = t; now = performance.now();
+  const k = reduce ? 1 : Math.min(1, dt * 7);
+  A.s = A.s.map((v, i) => v + ((i === step ? 1 : 0) - v) * k);
+
+  // the click fades in and out; the energy is rebuilt while it changes
+  const ct = S1.clickOn ? 1 : 0;
+  if (A.click !== ct) { A.click += (ct - A.click) * (reduce ? 1 : Math.min(1, dt * 6)); if (Math.abs(A.click - ct) < .003) A.click = ct; rebuild(A.click); }
+  A.emax += (E.max * 1.08 - A.emax) * (reduce ? 1 : Math.min(1, dt * 5));
+
+  // Auto: line 1, line 2, then the window slides to the argmax and locks
+  if (S1.auto) {
+    const u = now - S1.auto.t0;
+    S1.line = u < 700 ? 0 : u < 1500 ? 1 : 2;
+    if (u >= 1500) {
+      const f = clamp((u - 1500) / 1000, 0, 1);
+      S1.ws = mix(S1.auto.from, E.arg / DRAW_RATE, easeIO(f));
+      if (f >= 1) { S1.ws = E.arg / DRAW_RATE; S1.auto = null; S1.locked = true; }
+    }
+  }
+
+  if (pointer.type === 'mouse') act = pointer.inside && !S1.drag ? pick() : null;
+  ctx.clearRect(0, 0, W, H);
+  if (A.s[0] > .01) drawS0(A.s[0]);
+  if (A.s[1] > .01) drawS1(A.s[1]);
+  if (A.s[2] > .01) drawS2(A.s[2]);
+  if (A.s[3] > .01) drawS3(A.s[3]);
+  cv.style.cursor = step === 1 ? (S1.drag ? 'grabbing' : dragZone(pointer.x, pointer.y) && pointer.inside ? 'grab' : 'default') : act ? 'pointer' : 'default';
+
+  showCard();
+  if (act) placeCard();
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', () => { layout(); });
+syncUI(); layout();
+requestAnimationFrame(frame);
+
+// debug hook used by the test script
+window.__exs3 = {
+  step: () => step, layout: () => L, state: () => ({ ws: S1.ws, locked: S1.locked, line: S1.line, auto: !!S1.auto, clickOn: S1.clickOn }),
+  argmax: () => E.arg / DRAW_RATE, energy: () => ({ max: E.max, arg: E.arg }), card: () => card.classList.contains('on') ? card.textContent : '',
+  pick: (x, y) => { pointer.x = x; pointer.y = y; const r = pick(); return r && r.key; },
+};
+})();
+</script>
+</body>
+</html>
