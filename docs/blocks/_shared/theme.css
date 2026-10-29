@@ -1,0 +1,28 @@
+/* Neon theme shared by every block page: colour tokens, local fonts (SIL OFL, see fonts/) and font stacks.
+   Roles: gray = raw sound, inputs, settings; green (--link) = links and processing; neon = labels, answers, the selected or active item. */
+:root{
+  --bg:#040604;
+  --bg-glow:#102014;
+  --ink:#e9f2e9;
+  --muted:#7e8b7f;
+  --dim:#4d594e;
+  --neon:#39ff14;        /* labels, classes, selected, active, buttons, accents */
+  --link:#22c55e;        /* lines, links, processed data */
+  --gray:#a3ada4;        /* raw data, settings, secondary */
+  --panel:rgba(6,10,6,.94);
+  --panel-border:rgba(57,255,20,.7);
+  --panel-glow:0 0 30px rgba(57,255,20,.18);
+  --code-bg:rgba(57,255,20,.1);
+  --code-ink:#b9f5b0;
+  --on-neon:#040604;     /* text on a neon fill is always black */
+  --page-bg:radial-gradient(ellipse at 50% 45%,var(--bg-glow) 0%,#080d09 48%,var(--bg) 100%);
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --head:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+
+@font-face{font-family:"Space Grotesk";font-weight:600;font-style:normal;font-display:swap;src:url("fonts/space-grotesk-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Space Grotesk";font-weight:700;font-style:normal;font-display:swap;src:url("fonts/space-grotesk-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:400;font-style:normal;font-display:swap;src:url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-weight:700;font-style:normal;font-display:swap;src:url("fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2")}
