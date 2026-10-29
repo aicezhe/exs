@@ -4,21 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Block 1 · Imports</title>
+<link rel="stylesheet" href="../_shared/theme.css">
 <style>
-  :root {
-    --bg0: #030720;
-    --bg1: #0a1650;
-    --link: #3b7bff;
-    --pink: #ff4fa3;
-    --setting: #9db8ff;
-    --ink: #e8eeff;
-    --muted: #8fa0d6;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+    font-family: var(--body); }
+  body { background: var(--page-bg); }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
   canvas.drag { cursor: grabbing; }
 
@@ -27,36 +18,38 @@
   .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
   .hud.tr { top: 30px; right: 32px; font-size: 13px; color: var(--muted); text-align: right; }
   /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
-  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
-    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
-    transition: border-color .2s, color .2s; }
-  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
-  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid var(--neon);
+    border-radius: 999px; color: var(--ink); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 8px 0 6px; font: 700 clamp(24px, 3.2vw, 40px)/1.15 var(--head); letter-spacing: -.01em; }
   .sub { font-size: 14px; color: var(--muted); }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
-  .dot.imp { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
-  .dot.set { background: var(--setting); box-shadow: 0 0 8px var(--setting); }
+  .dot.imp { background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+  .dot.set { background: var(--gray); box-shadow: 0 0 8px var(--gray); }
   .line { display: inline-block; width: 18px; height: 2px; margin-right: 7px; vertical-align: 3px; background: var(--link); }
 
   #card {
     position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
-    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
     backdrop-filter: blur(6px); pointer-events: none;
     opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
   }
   #card.on { opacity: 1; transform: none; }
-  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
-  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  #card.setting .tag { color: var(--setting); }
-  #card h2 { margin: 6px 0 10px; font: 600 24px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
-  #card.setting h2 { color: var(--setting); }
-  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
-    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card.setting { border-color: color-mix(in srgb, var(--gray) 70%, transparent); }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    background: var(--neon); color: var(--on-neon); }
+  #card.setting .tag { background: var(--gray); }
+  #card h2 { margin: 8px 0 10px; font: 700 24px/1.15 var(--mono); color: var(--neon); word-break: break-word; }
+  #card.setting h2 { color: var(--gray); }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: var(--code-bg);
+    color: var(--code-ink); font: 400 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
   #card p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.5; }
   #card .lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-  #card .note { padding: 8px 10px; border-radius: 8px; background: rgba(255, 79, 163, .12); color: #ffc4e1; font-size: 13px; }
+  #card .note { padding: 8px 10px; border-radius: 8px; background: var(--code-bg); color: var(--code-ink); font-size: 13px; }
   #card .src { margin-top: 10px; font-size: 12px; color: var(--muted); word-break: break-word; }
   @media (max-width: 700px) {
     #card { left: 16px !important; right: 16px; top: auto !important; bottom: 16px; width: auto; }
@@ -84,12 +77,13 @@
 
 <div id="card" role="status" aria-live="polite"></div>
 
+<script src="../_shared/theme.js"></script>
 <script>
 (() => {
 'use strict';
 
 /* ------------------------------------------------------------------
-   DATA. Edit the text here. kind: 'import' (pink) or 'setting' (pale blue).
+   DATA. Edit the text here. kind: 'import' (neon) or 'setting' (gray).
    Set SHOW_SETTINGS to false to keep only imports.
 ------------------------------------------------------------------ */
 const SHOW_SETTINGS = true;
@@ -250,7 +244,7 @@ const NODES = [
     src: 'our choice' },
 ].filter(n => SHOW_SETTINGS || n.kind === 'import');
 
-// Semantic links (shown as brighter blue lines)
+// Semantic links (shown as brighter green lines)
 const LINKS = [
   ['numpy','pandas'], ['numpy','librosa'], ['librosa','soundfile'], ['numpy','pyplot'],
   ['tensorflow','keras'], ['keras','layers'], ['tensorflow','numpy'], ['tts','pandas'],
@@ -267,7 +261,7 @@ const LINKS = [
    Layout: nodes sit on a sphere. Related nodes are placed close
    together by a small deterministic annealing pass.
 ------------------------------------------------------------------ */
-const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+const MONO = THEME.mono;
 function rng(seed) {
   return function () {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
@@ -445,12 +439,12 @@ function frame(ts) {
   // edges
   for (const ed of edges) {
     const a = pr[ed.a], b = pr[ed.b], d = (a.d + b.d) / 2;
-    let alpha = ed.sem ? 0.22 + 0.5 * d : 0.05 + 0.22 * d, col = '59,123,255', w = ed.sem ? 1.3 : 0.8;
+    let alpha = ed.sem ? 0.22 + 0.5 * d : 0.05 + 0.22 * d, col = 'link', w = ed.sem ? 1.3 : 0.8;
     if (act !== null) {
       const touches = ed.sem && (ed.a === act || ed.b === act);
-      if (touches) { col = '255,110,185'; alpha = 0.95; w = 2.4; } else alpha *= 0.3;
+      if (touches) { col = 'neon'; alpha = 0.95; w = 2.4; } else alpha *= 0.3;
     }
-    ctx.strokeStyle = `rgba(${col},${(alpha * e).toFixed(3)})`;
+    ctx.strokeStyle = THEME.a(col, (alpha * e).toFixed(3));
     ctx.lineWidth = w * (0.6 + 0.6 * d);
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
@@ -460,14 +454,14 @@ function frame(ts) {
     pl.t += pl.v * dt * (1 - 0.8 * hold);
     if (pl.t > 1) { pl.t = 0; pl.e = Math.floor(rnd() * semEdges.length); }
     const ed = semEdges[pl.e], a = pr[ed.a], b = pr[ed.b];
-    ctx.fillStyle = `rgba(160,200,255,${(0.35 + 0.6 * (a.d + b.d) / 2) * e})`;
+    ctx.fillStyle = THEME.a('link', (0.35 + 0.6 * (a.d + b.d) / 2) * e);
     ctx.beginPath(); ctx.arc(a.x + (b.x - a.x) * pl.t, a.y + (b.y - a.y) * pl.t, 2.2, 0, 6.283); ctx.fill();
   }
 
   // dust
   for (let i = N; i < pts.length; i++) {
     const o = pr[i], tw = 0.55 + 0.45 * Math.sin(t * 1.4 + pts[i].ph);
-    ctx.fillStyle = `rgba(130,175,255,${((0.12 + 0.5 * o.d) * tw * e * (act !== null ? 0.5 : 1)).toFixed(3)})`;
+    ctx.fillStyle = THEME.a('link', ((0.12 + 0.5 * o.d) * tw * e * (act !== null ? 0.5 : 1)).toFixed(3));
     ctx.beginPath(); ctx.arc(o.x, o.y, 1.3 * o.s, 0, 6.283); ctx.fill();
   }
 
@@ -479,19 +473,20 @@ function frame(ts) {
     const near = act === null || k === act || nb.has(k);
     let alpha = (0.28 + 0.72 * o.d) * (near ? 1 : 0.28) * e;
     const fs = (isImp ? 17 : 13) * o.s * (1 + 0.5 * st.pop);
-    const col = isImp ? '#ff4fa3' : '#9db8ff';
-    ctx.font = `${isImp ? 600 : 500} ${fs.toFixed(1)}px ${MONO}`;
+    const col = isImp ? THEME.neon : THEME.gray;
+    ctx.font = `${isImp ? 700 : 400} ${fs.toFixed(1)}px ${MONO}`;
     const tw = ctx.measureText(n.label).width;
     st.hw = tw + 8; st.fs = fs;
 
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    const hot = st.pop > 0.5; // the active node: a neon (or gray) fill with black text
     if (st.pop > 0.02) {
-      ctx.fillStyle = `rgba(4,10,42,${0.9 * st.pop})`;
+      ctx.fillStyle = THEME.a(isImp ? 'neon' : 'gray', 0.95 * st.pop);
       ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       pill(o.x - 12, o.y - fs * 0.85, tw + 8 + 24, fs * 1.7, 10); ctx.fill(); ctx.stroke();
     }
     ctx.shadowColor = col; ctx.shadowBlur = (6 + 22 * st.pop) * o.d;
-    ctx.fillStyle = col;
+    ctx.fillStyle = hot ? THEME.onNeon : col;
     ctx.beginPath(); ctx.arc(o.x, o.y, (2.6 + 2.4 * st.pop) * o.s, 0, 6.283); ctx.fill();
     ctx.textBaseline = 'middle';
     ctx.fillText(n.label, o.x + 8, o.y + 1);

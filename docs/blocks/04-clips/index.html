@@ -4,21 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Block 4 · Clips</title>
+<link rel="stylesheet" href="../_shared/theme.css">
 <style>
-  :root {
-    --bg0: #030720;
-    --bg1: #0a1650;
-    --link: #3b7bff;
-    --pink: #ff4fa3;
-    --setting: #9db8ff;
-    --ink: #e8eeff;
-    --muted: #8fa0d6;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+    font-family: var(--body); }
+  body { background: var(--page-bg); }
   /* touch-action: none, so a finger drag on the graph moves the window instead of scrolling the page */
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
@@ -26,12 +17,13 @@
   .hud.tl { top: 28px; left: 32px; }
   .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
   /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
-  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
-    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
-    transition: border-color .2s, color .2s; }
-  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
-  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid var(--neon);
+    border-radius: 999px; color: var(--ink); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 8px 0 6px; font: 700 clamp(24px, 3.2vw, 40px)/1.15 var(--head); letter-spacing: -.01em; }
   .sub { font-size: 14px; color: var(--muted); }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
 
@@ -39,47 +31,46 @@
   #cap { position: fixed; z-index: 2; left: 50%; bottom: 86px; transform: translateX(-50%); width: min(660px, calc(100vw - 32px));
     text-align: center; font-size: 14.5px; line-height: 1.45; color: var(--ink); pointer-events: none; min-height: 21px; }
   #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
-  #nav button, #tools button { font: inherit; color: var(--ink); background: rgba(8, 16, 64, .72); border: 1px solid rgba(143, 160, 214, .4);
+  #nav button, #tools button { font: inherit; color: var(--ink); background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon);
     cursor: pointer; display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px);
     transition: border-color .2s, box-shadow .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
-  #nav button:hover:not(:disabled), #nav button:focus-visible, #tools button:hover, #tools button:focus-visible { border-color: var(--pink); outline: none; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible, #tools button:hover, #tools button:focus-visible, #onward:hover, #onward:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  #nav button:active:not(:disabled), #tools button:active, #onward:active { background: var(--neon); color: var(--on-neon); }
   #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
-  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; border-color: rgba(255, 79, 163, .7) !important;
-    box-shadow: 0 0 22px rgba(255, 79, 163, .25); }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; box-shadow: 0 0 22px color-mix(in srgb, var(--neon) 25%, transparent); }
   #nav button[hidden] { display: none; }
   #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
   #onward { height: 44px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 22px; white-space: nowrap; font-size: 14px; color: var(--ink);
-    text-decoration: none; background: rgba(8, 16, 64, .72); border: 1px solid rgba(255, 79, 163, .7); box-shadow: 0 0 18px rgba(255, 79, 163, .25); }
+    text-decoration: none; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); box-shadow: 0 0 18px color-mix(in srgb, var(--neon) 25%, transparent); }
   #onward[hidden] { display: none; }
-  #onward:hover, #onward:focus-visible { border-color: var(--pink); outline: none; }
   #dots { display: flex; gap: 8px; }
   #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
-  #dots i.on { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink); }
+  #dots i.on { background: var(--neon); border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
 
   /* the buttons of step 2 (Auto, Add a loud click), just above the caption */
   #tools { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); display: none; gap: 10px; white-space: nowrap; }
   #tools.on { display: flex; }
   #tools button { height: 38px; padding: 0 18px; border-radius: 19px; font-size: 14px; }
-  #auto { border-color: rgba(255, 79, 163, .7) !important; box-shadow: 0 0 16px rgba(255, 79, 163, .22); }
+  #auto { box-shadow: 0 0 16px color-mix(in srgb, var(--neon) 22%, transparent); }
 
   #card {
     position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
-    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
     backdrop-filter: blur(6px); pointer-events: none;
     opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
   }
   #card.on { opacity: 1; transform: none; }
-  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
-  #card.quiet { border-color: rgba(143, 160, 214, .5); box-shadow: 0 10px 40px rgba(0,0,0,.5); }
-  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  #card.setting .tag { color: var(--setting); }
-  #card.quiet .tag { color: var(--muted); }
-  #card h2 { margin: 6px 0 10px; font: 600 22px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
-  #card.setting h2 { color: var(--setting); }
+  #card.setting { border-color: color-mix(in srgb, var(--gray) 70%, transparent); }
+  #card.quiet { border-color: color-mix(in srgb, var(--gray) 55%, transparent); box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent); }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    background: var(--neon); color: var(--on-neon); }
+  #card.setting .tag, #card.quiet .tag { background: var(--gray); }
+  #card h2 { margin: 8px 0 10px; font: 700 24px/1.15 var(--mono); color: var(--neon); word-break: break-word; }
+  #card.setting h2 { color: var(--gray); }
   #card.quiet h2 { color: var(--ink); }
-  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
-    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: var(--code-bg);
+    color: var(--code-ink); font: 400 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
   #card p { margin: 0; font-size: 14.5px; line-height: 1.5; }
   @media (max-width: 700px) {
     #card { left: 16px !important; right: 16px; top: auto !important; bottom: 100px; width: auto; }
@@ -100,9 +91,9 @@
   <div class="sub">notebook cell 2 · tap or drag</div>
 </div>
 <div class="hud bl">
-  <span><i class="dot" style="background:#ff4fa3;box-shadow:0 0 8px #ff4fa3"></i>signal</span>
-  <span><i class="dot" style="background:#9db8ff;box-shadow:0 0 8px #9db8ff"></i>1 s window</span>
-  <span><i class="dot" style="background:#4f9dff"></i>zeros: silence</span>
+  <span><i class="dot" style="background:var(--gray)"></i>raw signal</span>
+  <span><i class="dot" style="background:var(--neon);box-shadow:0 0 8px var(--neon)"></i>1 s window</span>
+  <span><i class="dot" style="background:var(--link)"></i>zeros: silence</span>
 </div>
 
 <div id="cap" aria-live="polite"></div>
@@ -118,6 +109,7 @@
 </nav>
 <div id="card" role="status" aria-live="polite"></div>
 
+<script src="../_shared/theme.js"></script>
 <script>
 (() => {
 'use strict';
@@ -145,7 +137,8 @@ const CODE = ['cs = cumsum(y**2)', 'energy = cs[N:] - cs[:-N]', 'start = argmax(
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const mix = (a, b, t) => a + (b - a) * t;
 
-const COL = { sig: '#ff4fa3', frame: '#9db8ff', zero: '#4f9dff', muted: '#8fa0d6', ink: '#e8eeff', gray: '#6f7aa8' };
+// roles: raw sound = gray, processing = link green, the selected window and the answers = neon
+const COL = { sig: THEME.neon, raw: THEME.gray, frame: THEME.link, zero: THEME.link, muted: THEME.muted, ink: THEME.ink, gray: THEME.muted };
 
 /* ------------------------------------------------------------------
    Synthetic signals: a smooth burst (a few sines under a bell-shaped
@@ -221,7 +214,7 @@ const card = $('card'), hudEl = $('hud'), capEl = $('cap'), toolsEl = $('tools')
 const prevBtn = $('prev'), nextBtn = $('next'), autoBtn = $('auto'), clickBtn = $('click');
 const dots = [...document.querySelectorAll('#dots i')];
 const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+const MONO = THEME.mono;
 const ease = u => 1 - Math.pow(1 - u, 3);
 const easeIO = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
 
@@ -471,9 +464,9 @@ function placeCard() {
 ------------------------------------------------------------------ */
 function frameBox(x, y, w, h, a, dashed) {
   ctx.save(); ctx.globalAlpha = a; rr(x, y, w, h, 10);
-  ctx.fillStyle = 'rgba(157,184,255,.06)'; ctx.fill();
+  ctx.fillStyle = THEME.a('link', .06); ctx.fill();
   ctx.setLineDash(dashed ? [7, 5] : []); ctx.lineDashOffset = reduce ? 0 : -(now / 70) % 12;
-  ctx.strokeStyle = 'rgba(157,184,255,.75)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = THEME.a('link', .8); ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
 }
 const note = (x, y, align, a) => T('illustrative signal', x, y, COL.gray, Math.max(10, fs * .78), align, a);
 
@@ -485,10 +478,10 @@ function drawS0(a) {
   g.rows.forEach((r, i) => {
     const sec = r.rec.sec, wpx = sec * g.pps, hov = act && act.kind === 'rec' && act.i === i, dim = act && act.kind === 'rec' && !hov ? .3 : 1;
     const u = clamp(grow * 1.4 - i * .12, 0, 1);
-    ctx.globalAlpha = a * dim; ctx.strokeStyle = 'rgba(143,160,214,.3)'; ctx.lineWidth = 1;
+    ctx.globalAlpha = a * dim; ctx.strokeStyle = THEME.a('gray', .3); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(g.x0, r.yc); ctx.lineTo(g.x0 + wpx * u, r.yc); ctx.stroke();
     ctx.save(); ctx.beginPath(); ctx.rect(g.x0 - 1, r.top, wpx * u + 2, r.h); ctx.clip(); ctx.globalAlpha = a * dim;
-    strokeWave(r.rec.y, g.x0, g.pps, r.yc, r.half, COL.sig, hov ? 1.7 : 1.15, 0, r.rec.y.length, hov ? 10 : 0);
+    strokeWave(r.rec.y, g.x0, g.pps, r.yc, r.half, COL.raw, hov ? 1.7 : 1.15, 0, r.rec.y.length, hov ? 10 : 0);
     ctx.restore(); ctx.globalAlpha = 1;
     T(`${sec.toFixed(1)} s`, g.x0 + 2, r.top + 8, hov ? COL.ink : COL.muted, sm + 1, 'left', a * dim);
     note(g.x0 + g.pps * 2.5, r.top + 8, 'right', a * dim * .9);
@@ -502,10 +495,10 @@ function drawS1(a) {
   T('recording · 2.5 s', g.x0, g.titleY, COL.muted, sm + 1, 'left', a); note(g.x0 + aw, g.titleY, 'right', a);
 
   // wave panel
-  ctx.globalAlpha = a; rr(g.x0 - 4, g.wy0, aw + 8, g.wy1 - g.wy0, 10); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(59,123,255,.5)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = a; rr(g.x0 - 4, g.wy0, aw + 8, g.wy1 - g.wy0, 10); ctx.fillStyle = THEME.a('bgGlow', .55); ctx.fill();
+  ctx.strokeStyle = THEME.a('link', .5); ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
   // outside the window the wave is dim, inside it is bright
-  ctx.globalAlpha = a * .28; strokeWave(E.sig, g.x0, g.pps, g.wyc, g.half, COL.sig, 1.1, 0, E.sig.length, 0);
+  ctx.globalAlpha = a * .45; strokeWave(E.sig, g.x0, g.pps, g.wyc, g.half, COL.raw, 1.1, 0, E.sig.length, 0);
   ctx.save(); ctx.beginPath(); ctx.rect(wx, g.wy0, ww, g.wy1 - g.wy0); ctx.clip(); ctx.globalAlpha = a;
   strokeWave(E.sig, g.x0, g.pps, g.wyc, g.half, COL.sig, 1.4, 0, E.sig.length, 6); ctx.restore(); ctx.globalAlpha = 1;
   // time ticks
@@ -524,12 +517,12 @@ function drawS1(a) {
   // the window
   const lock = S1.locked;
   ctx.save(); ctx.globalAlpha = a; rr(wx, g.wy0 + 2, ww, g.wy1 - g.wy0 - 4, 8);
-  ctx.fillStyle = 'rgba(157,184,255,.07)'; ctx.fill(); ctx.strokeStyle = lock ? COL.sig : COL.frame; ctx.lineWidth = lock ? 2 : 1.6;
-  ctx.shadowColor = lock ? COL.sig : COL.frame; ctx.shadowBlur = S1.drag || lock ? 14 : 6; ctx.stroke(); ctx.restore();
-  T(lock ? 'locked: loudest window' : '1 s window', wx + 8, g.wy1 - 12, lock ? COL.sig : COL.frame, sm, 'left', a);
+  ctx.fillStyle = THEME.a('neon', lock ? .1 : .06); ctx.fill(); ctx.strokeStyle = COL.sig; ctx.lineWidth = lock ? 2 : 1.6;
+  ctx.shadowColor = COL.sig; ctx.shadowBlur = S1.drag || lock ? 14 : 6; ctx.stroke(); ctx.restore();
+  T(lock ? 'locked: loudest window' : '1 s window', wx + 8, g.wy1 - 12, COL.sig, sm, 'left', a);
   // grip: three short lines, with a soft pulse until the first drag
   const gy = g.wyc, gx = wx + ww / 2, pulse = reduce || S1.moved || S1.auto ? 0 : (Math.sin(now / 400) + 1) / 2;
-  ctx.globalAlpha = a * (.55 + .35 * pulse); ctx.strokeStyle = lock ? COL.sig : COL.frame; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.globalAlpha = a * (.55 + .35 * pulse); ctx.strokeStyle = COL.sig; ctx.lineWidth = 2; ctx.lineCap = 'round';
   for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(gx + k * 5, gy - 9); ctx.lineTo(gx + k * 5, gy + 9); ctx.stroke(); }
   ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
   // the trap note
@@ -539,14 +532,14 @@ function drawS1(a) {
   // energy panel
   T('energy of the 1 s window', g.x0, g.etitleY, COL.muted, sm + 1, 'left', a); T('window start →', g.x0 + aw, g.etitleY, COL.gray, sm, 'right', a);
   const ph = g.ey1 - g.ey0 - 12, ybase = g.ey1 - 6, xr = g.x0 + (dur - CLIP_SECONDS) * g.pps;
-  ctx.globalAlpha = a; rr(g.x0 - 4, g.ey0, aw + 8, g.ey1 - g.ey0, 10); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(59,123,255,.5)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = a; rr(g.x0 - 4, g.ey0, aw + 8, g.ey1 - g.ey0, 10); ctx.fillStyle = THEME.a('bgGlow', .55); ctx.fill();
+  ctx.strokeStyle = THEME.a('link', .5); ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
   T('no full window', (xr + g.x0 + aw) / 2 + 4, ybase - ph / 2, COL.gray, sm, 'center', a * .7);
   const yOf = v => ybase - clamp(v / A.emax, 0, 1.05) * ph;
   const curve = () => { ctx.beginPath(); ctx.moveTo(g.x0, ybase); for (let px = 0; px <= xr - g.x0; px++) ctx.lineTo(g.x0 + px, yOf(energyAt(px / g.pps))); ctx.lineTo(xr, ybase); };
-  curve(); ctx.globalAlpha = a; ctx.fillStyle = 'rgba(59,123,255,.22)'; ctx.fill();
+  curve(); ctx.globalAlpha = a; ctx.fillStyle = THEME.a('link', .22); ctx.fill();
   ctx.beginPath(); for (let px = 0; px <= xr - g.x0; px++) { const y = yOf(energyAt(px / g.pps)); px ? ctx.lineTo(g.x0 + px, y) : ctx.moveTo(g.x0, y); }
-  ctx.strokeStyle = '#6f9bff'; ctx.lineWidth = 1.8; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = THEME.link; ctx.lineWidth = 1.8; ctx.stroke(); ctx.globalAlpha = 1;
   // scan line while "energy = cs[N:] - cs[:-N]" is highlighted
   if (S1.auto && S1.line === 1) {
     const u = clamp((now - S1.auto.t0 - 700) / 800, 0, 1), sx = g.x0 + u * (xr - g.x0);
@@ -554,7 +547,7 @@ function drawS1(a) {
   }
   // the running marker and its number
   const ev = energyAt(S1.ws), my = yOf(ev);
-  ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(255,79,163,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(wx, g.ey0 + 4); ctx.lineTo(wx, ybase); ctx.stroke();
+  ctx.globalAlpha = a; ctx.strokeStyle = THEME.a('neon', .55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(wx, g.ey0 + 4); ctx.lineTo(wx, ybase); ctx.stroke();
   ctx.beginPath(); ctx.arc(wx, my, 5, 0, 6.283); ctx.fillStyle = COL.sig; ctx.shadowColor = COL.sig; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   const right = wx < g.x0 + 1.1 * g.pps;
   T(`E = ${ev.toFixed(1)}${S1.locked ? ' · max' : ''}`, right ? wx + 10 : wx - 10, clamp(my - 14, g.ey0 + 18, ybase - 8), COL.ink, sm + 1.5, right ? 'left' : 'right', a);
@@ -563,9 +556,9 @@ function drawS1(a) {
   ctx.font = `${fs}px ${MONO}`;
   CODE.forEach((t, i) => {
     const y = g.codeY0 + i * g.ln + g.ln / 2, on = S1.line === i, w = ctx.measureText(t).width;
-    if (on) { ctx.save(); ctx.globalAlpha = a; rr(g.x0 - 6, y - g.ln / 2 + 2, w + 12, g.ln - 4, 6); ctx.fillStyle = 'rgba(255,79,163,.18)';
-      ctx.shadowColor = COL.sig; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,79,163,.85)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.restore(); }
-    T(t, g.x0, y, on ? COL.ink : COL.muted, fs, 'left', a);
+    if (on) { ctx.save(); ctx.globalAlpha = a; rr(g.x0 - 6, y - g.ln / 2 + 2, w + 12, g.ln - 4, 6); ctx.fillStyle = THEME.a('neon', .95);
+      ctx.shadowColor = COL.sig; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0; ctx.restore(); }
+    T(t, g.x0, y, on ? THEME.onNeon : COL.muted, fs, 'left', a);
   });
 }
 
@@ -575,9 +568,9 @@ function drawS2(a) {
   const xe = g.x0 + SHORT.sec * g.pps, xf = g.x0 + g.pps, gw = prog(800), gp = prog(900, 500);
   frameBox(g.x0, g.fy0, g.pps, g.fy1 - g.fy0, a, true);
   T('1 s = 16000 samples', g.x0 + 8, g.fy0 + 14, COL.frame, sm, 'left', a); note(g.x0 + g.pps - 8, g.fy0 + 14, 'right', a * .9);
-  ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(143,160,214,.3)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.x0, g.yc); ctx.lineTo(xe, g.yc); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = a; ctx.strokeStyle = THEME.a('gray', .3); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.x0, g.yc); ctx.lineTo(xe, g.yc); ctx.stroke(); ctx.globalAlpha = 1;
   ctx.save(); ctx.beginPath(); ctx.rect(g.x0 - 1, g.yc - g.half - 6, (xe - g.x0 + 2) * gw, g.half * 2 + 12); ctx.clip(); ctx.globalAlpha = a;
-  strokeWave(SHORT.y, g.x0, g.pps, g.yc, g.half, COL.sig, 1.4, 0, SHORT.y.length, 6); ctx.restore(); ctx.globalAlpha = 1;
+  strokeWave(SHORT.y, g.x0, g.pps, g.yc, g.half, COL.raw, 1.4, 0, SHORT.y.length, 6); ctx.restore(); ctx.globalAlpha = 1;
   // the padding grows to the right edge of the frame
   const xp = mix(xe, xf, gp), hov = act && act.kind === 'pad';
   if (gp > 0) {
@@ -587,7 +580,7 @@ function drawS2(a) {
   // under the wave: how many samples each part holds
   const by = g.yc + g.half + 22;
   const brace = (xa, xb, col, t, al) => { ctx.globalAlpha = a * al; ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xa + 2, by - 5); ctx.lineTo(xa + 2, by); ctx.lineTo(xb - 2, by); ctx.lineTo(xb - 2, by - 5); ctx.stroke(); ctx.globalAlpha = 1; T(t, (xa + xb) / 2, by + 14, col, sm, 'center', a * al); };
-  brace(g.x0, xe, COL.sig, `${n0} samples · ${SHORT.sec.toFixed(1)} s`, gw);
+  brace(g.x0, xe, COL.raw, `${n0} samples · ${SHORT.sec.toFixed(1)} s`, gw);
   brace(xe, xf, COL.zero, `${nz} zeros`, clamp((gp - .6) / .4, 0, 1));
   T('zeros: silence', (xe + xf) / 2, g.yc - 18, COL.zero, sm + 1.5, 'center', a * clamp((gp - .5) / .5, 0, 1));
 }
@@ -598,13 +591,13 @@ function drawS3(a) {
   // header of the matrix: N rows on the left, 16000 columns across
   T(`N = ${N_CLIPS} rows`, g.mx, g.my - 14, COL.muted, sm + 1, 'left', a); T(`${N_SAMPLES} columns`, g.mx + g.mw, g.my - 14, COL.muted, sm + 1, 'right', a);
   ctx.globalAlpha = a * .6; ctx.strokeStyle = COL.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.mx, g.my - 5); ctx.lineTo(g.mx + g.mw, g.my - 5); ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.globalAlpha = a; rr(g.mx - 4, g.my - 3, g.mw + 8, g.mh + 6, 8); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(59,123,255,.55)'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = a; rr(g.mx - 4, g.my - 3, g.mw + 8, g.mh + 6, 8); ctx.fillStyle = THEME.a('bgGlow', .55); ctx.fill(); ctx.strokeStyle = THEME.a('link', .55); ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
   for (let i = 0; i < N_CLIPS; i++) {
     const p = prog(450, 150 + i * 35), y = g.my + i * (g.rowH + g.gap) + (1 - p) * -26, h = Math.max(2, g.rowH), al = a * p * (hl >= 0 && hl !== i ? .35 : 1);
     if (al < .01) continue;
     const gr = ctx.createLinearGradient(g.mx, 0, g.mx + g.mw, 0), c = ROW_C[i], v = (i % 5) * 9;
-    const base = `rgba(${79 + v},${111 - v},${192},.45)`;
-    gr.addColorStop(0, base); gr.addColorStop(clamp(c - .16, 0, 1), base); gr.addColorStop(c, 'rgba(255,79,163,.95)'); gr.addColorStop(clamp(c + .16, 0, 1), base); gr.addColorStop(1, base);
+    const base = THEME.a('link', .1 + v / 300);
+    gr.addColorStop(0, base); gr.addColorStop(clamp(c - .16, 0, 1), base); gr.addColorStop(c, THEME.a('neon', .95)); gr.addColorStop(clamp(c + .16, 0, 1), base); gr.addColorStop(1, base);
     ctx.globalAlpha = al; ctx.fillStyle = gr; rr(g.mx, y, g.mw, h, Math.min(3, h / 2)); ctx.fill();
     if (hl === i) { ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.4; ctx.shadowColor = COL.sig; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0; }
     ctx.globalAlpha = 1;
@@ -615,15 +608,15 @@ function drawS3(a) {
   const qa = a * prog(500, 400);
   T('Quick check', g.qTitle.x, g.qTitle.y, COL.muted, sm + 1, 'left', qa); T('illustrative signals', g.qTitle.x + (g.cells[0].w * (g.wide ? 2 : 4)) + (g.wide ? 14 : 24), g.qTitle.y, COL.gray, Math.max(10, fs * .78), 'right', qa);
   g.cells.forEach(c => {
-    const hov = act && act.kind === 'check' && act.c === c.c, dim = act && act.kind === 'check' && !hov ? .4 : 1, ph = c.h - 18, col = c.c.ok ? COL.frame : COL.sig;
-    ctx.globalAlpha = qa * dim; rr(c.x, c.y, c.w, ph, 8); ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = hov ? col : 'rgba(59,123,255,.5)'; ctx.lineWidth = hov ? 1.6 : 1.1; ctx.stroke();
+    const hov = act && act.kind === 'check' && act.c === c.c, dim = act && act.kind === 'check' && !hov ? .4 : 1, ph = c.h - 18, col = c.c.ok ? COL.zero : COL.raw, tcol = c.c.ok ? COL.sig : COL.ink;
+    ctx.globalAlpha = qa * dim; rr(c.x, c.y, c.w, ph, 8); ctx.fillStyle = THEME.a('bgGlow', .55); ctx.fill(); ctx.strokeStyle = hov ? COL.sig : THEME.a('link', .5); ctx.lineWidth = hov ? 1.6 : 1.1; ctx.stroke();
     // the ±1 limits and the zero line
-    ctx.strokeStyle = 'rgba(143,160,214,.25)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = THEME.a('gray', .25); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
     const yc = c.y + ph / 2, half = ph / 2 * .86;
     [-1, 0, 1].forEach(k => { ctx.beginPath(); ctx.moveTo(c.x + 4, yc + k * half); ctx.lineTo(c.x + c.w - 4, yc + k * half); ctx.stroke(); });
     ctx.setLineDash([]); ctx.globalAlpha = 1;
     ctx.save(); ctx.globalAlpha = qa * dim; strokeWave(c.c.y, c.x + 4, c.w - 8, yc, half, col, 1.2, 0, c.c.y.length, 0); ctx.restore();
-    T((c.c.ok ? '✓ ' : '✗ ') + c.c.label, c.x + 2, c.y + c.h - 7, col, sm, 'left', qa * dim);
+    T((c.c.ok ? '✓ ' : '✗ ') + c.c.label, c.x + 2, c.y + c.h - 7, tcol, sm, 'left', qa * dim);
   });
 }
 

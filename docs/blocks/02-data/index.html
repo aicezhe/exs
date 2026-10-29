@@ -4,33 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Block 2 · Dataset index</title>
+<link rel="stylesheet" href="../_shared/theme.css">
 <style>
-  :root {
-    --bg0: #030720;
-    --bg1: #0a1650;
-    --link: #3b7bff;
-    --pink: #ff4fa3;
-    --setting: #9db8ff;
-    --ink: #e8eeff;
-    --muted: #8fa0d6;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-  body { background: radial-gradient(ellipse at 50% 45%, #0d1b6b 0%, #07103f 45%, #030720 100%); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+    font-family: var(--body); }
+  body { background: var(--page-bg); }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
 
   .hud { position: fixed; pointer-events: none; z-index: 2; }
   .hud.tl { top: 28px; left: 32px; }
   .hud.bl { bottom: 26px; left: 32px; display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
   /* "← all blocks": the back button of docs/blocks/index.html, in the HUD (which ignores the pointer, so the link turns it on) */
-  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
-    border-radius: 999px; color: var(--muted); font-size: 14px; text-decoration: none; pointer-events: auto;
-    transition: border-color .2s, color .2s; }
-  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
-  .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  h1 { margin: 8px 0 6px; font-size: clamp(24px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.01em; }
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid var(--neon);
+    border-radius: 999px; color: var(--ink); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 8px 0 6px; font: 700 clamp(24px, 3.2vw, 40px)/1.15 var(--head); letter-spacing: -.01em; }
   .sub { font-size: 14px; color: var(--muted); }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
 
@@ -38,36 +30,36 @@
   #cap { position: fixed; z-index: 2; left: 50%; bottom: 86px; transform: translateX(-50%); width: min(660px, calc(100vw - 32px));
     text-align: center; font-size: 14.5px; line-height: 1.45; color: var(--ink); pointer-events: none; min-height: 21px; }
   #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
-  #nav button { font: inherit; color: var(--ink); background: rgba(8, 16, 64, .72); border: 1px solid rgba(143, 160, 214, .4);
+  #nav button { font: inherit; color: var(--ink); background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon);
     cursor: pointer; display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px);
     transition: border-color .2s, box-shadow .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
-  #nav button:hover:not(:disabled), #nav button:focus-visible { border-color: var(--pink); outline: none; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  #nav button:active:not(:disabled) { background: var(--neon); color: var(--on-neon); }
   #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
-  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; border-color: rgba(255, 79, 163, .7) !important;
-    box-shadow: 0 0 22px rgba(255, 79, 163, .25); }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; box-shadow: 0 0 22px color-mix(in srgb, var(--neon) 25%, transparent); }
   #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
   #dots { display: flex; gap: 8px; }
   #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
-  #dots i.on { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink); }
+  #dots i.on { background: var(--neon); border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
 
   #card {
     position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
-    background: rgba(7, 14, 58, .93); border: 1px solid rgba(255, 79, 163, .6); border-radius: 14px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 79, 163, .16);
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
     backdrop-filter: blur(6px); pointer-events: none;
     opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
   }
   #card.on { opacity: 1; transform: none; }
-  #card.setting { border-color: rgba(157, 184, 255, .6); box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 30px rgba(59,123,255,.2); }
-  #card.quiet { border-color: rgba(143, 160, 214, .5); box-shadow: 0 10px 40px rgba(0,0,0,.5); }
-  #card .tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--pink); font-weight: 600; }
-  #card.setting .tag { color: var(--setting); }
-  #card.quiet .tag { color: var(--muted); }
-  #card h2 { margin: 6px 0 10px; font: 600 24px/1.15 var(--mono); color: var(--pink); word-break: break-word; }
-  #card.setting h2 { color: var(--setting); }
+  #card.setting { border-color: color-mix(in srgb, var(--gray) 70%, transparent); }
+  #card.quiet { border-color: color-mix(in srgb, var(--gray) 55%, transparent); box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent); }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    background: var(--neon); color: var(--on-neon); }
+  #card.setting .tag, #card.quiet .tag { background: var(--gray); }
+  #card h2 { margin: 8px 0 10px; font: 700 24px/1.15 var(--mono); color: var(--neon); word-break: break-word; }
+  #card.setting h2 { color: var(--gray); }
   #card.quiet h2 { color: var(--ink); }
-  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: rgba(59, 123, 255, .16);
-    color: #bcd0ff; font: 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: var(--code-bg);
+    color: var(--code-ink); font: 400 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
   #card p { margin: 0; font-size: 14.5px; line-height: 1.5; }
   @media (max-width: 700px) {
     #card { left: 16px !important; right: 16px; top: auto !important; bottom: 100px; width: auto; }
@@ -88,10 +80,10 @@
   <div class="sub">notebook cell 1 · tap or hover a part of a file name</div>
 </div>
 <div class="hud bl">
-  <span><i class="dot" style="background:#ff4fa3;box-shadow:0 0 8px #ff4fa3"></i>label</span>
-  <span><i class="dot" style="background:#9db8ff;box-shadow:0 0 8px #9db8ff"></i>speaker</span>
-  <span><i class="dot" style="background:#8a93b8"></i>number</span>
-  <span><i class="dot" style="background:#4f6fc0"></i>.wav</span>
+  <span><i class="dot" style="background:var(--neon);box-shadow:0 0 8px var(--neon)"></i>label</span>
+  <span><i class="dot" style="background:var(--ink);box-shadow:0 0 8px var(--ink)"></i>speaker</span>
+  <span><i class="dot" style="background:var(--muted)"></i>number</span>
+  <span><i class="dot" style="background:var(--dim)"></i>.wav</span>
 </div>
 
 <div id="cap" aria-live="polite"></div>
@@ -102,6 +94,7 @@
 </nav>
 <div id="card" role="status" aria-live="polite"></div>
 
+<script src="../_shared/theme.js"></script>
 <script>
 (() => {
 'use strict';
@@ -151,8 +144,8 @@ function parseName(name) {
   return { label: parts[0].toLowerCase(), speaker: parts[1].toLowerCase(), number: parts.slice(2).join('.') };
 }
 
-const COL = { label: '#ff4fa3', speaker: '#9db8ff', number: '#8a93b8', ext: '#4f6fc0', dot: '#4f6fc0', stem: '#c9d3f5' };
-const GRAY = [127, 137, 176];
+const COL = { label: THEME.neon, speaker: THEME.ink, number: THEME.muted, ext: THEME.dim, dot: THEME.dim, stem: THEME.ink };
+const GRAY = THEME.rgb.gray.split(',').map(Number); // ignored and skipped names fade to gray
 
 const ITEMS = FILES.map(name => {
   const r = parseName(name), stem = name.replace(/\.wav$/i, '');
@@ -189,7 +182,7 @@ const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const card = document.getElementById('card'), hudEl = document.getElementById('hud'), capEl = document.getElementById('cap');
 const prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), dots = [...document.querySelectorAll('#dots i')];
 const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+const MONO = THEME.mono;
 
 let W = 0, H = 0, narrow = false, fs = 15, lh = 28, step = 0, now = 0, firstLayout = true;
 const L = {};
@@ -199,7 +192,7 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const mix = (a, b, t) => a + (b - a) * t;
 function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-function rgba(c, a) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+const fromRgb = THEME.fromRgb;
 function rr(x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
@@ -367,7 +360,7 @@ function showCard() {
   let tag, h2, code, text, cls = '';
   if (k && PART_INFO[k]) {
     const i = PART_INFO[k]; tag = i.tag; code = i.code; text = i.text; h2 = act.seg.t;
-    cls = k === 'label' ? '' : k === 'speaker' ? 'setting' : 'quiet';
+    cls = k === 'label' ? '' : 'quiet';
   } else if (it.kind === 'skipped') {
     tag = 'skipped'; h2 = it.name; code = 'parse_name(path) -> None'; text = 'parse_name returns None: fewer than 3 parts'; cls = 'quiet';
   } else {
@@ -427,24 +420,24 @@ function drawTable() {
   const h = mix(L.th, L.xth, xt);
   ctx.save(); ctx.translate(0, L.shift * xt); // the whole block glides down with the crosstab
   ctx.globalAlpha = fa; rr(L.tx0 - 6, L.tt - 4, L.tw + 12, h + 8, 12);
-  ctx.fillStyle = 'rgba(8,16,64,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(59,123,255,.55)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = THEME.a('bgGlow', .55); ctx.fill(); ctx.strokeStyle = THEME.a('link', .55); ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
 
   // classes caption
-  drawLabel('CLASSES · only our data', L.tx0, L.ctop + 8, fa * .95, '#8fa0d6', fs * .8);
+  drawLabel('CLASSES · only our data', L.tx0, L.ctop + 8, fa * .95, THEME.muted, fs * .8);
   L.chips.forEach(c => {
-    ctx.globalAlpha = fa; rr(c.x, c.y - c.h / 2 + 0, c.w, c.h, 11); ctx.strokeStyle = 'rgba(255,79,163,.6)'; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = fa; rr(c.x, c.y - c.h / 2 + 0, c.w, c.h, 11); ctx.strokeStyle = THEME.a('neon', .6); ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
     drawLabel(c.c, c.x + 8, c.y, fa, COL.label, fs * .85);
   });
 
   // table header and row lines
   if (tbl > .01) {
     const hy = L.tt + L.rowH * .5;
-    drawLabel('path', L.pathX, hy, tbl, '#8fa0d6', fs * .85); drawLabel('label', L.labX, hy, tbl, '#8fa0d6', fs * .85); drawLabel('speaker', L.spkX, hy, tbl, '#8fa0d6', fs * .85);
-    ctx.strokeStyle = `rgba(143,160,214,${.28 * tbl})`; ctx.lineWidth = 1;
+    drawLabel('path', L.pathX, hy, tbl, THEME.muted, fs * .85); drawLabel('label', L.labX, hy, tbl, THEME.muted, fs * .85); drawLabel('speaker', L.spkX, hy, tbl, THEME.muted, fs * .85);
+    ctx.strokeStyle = THEME.a('gray', .28 * tbl); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(L.tx0 + 6, L.tt + L.rowH); ctx.lineTo(L.tx0 + L.tw - 6, L.tt + L.rowH); ctx.stroke();
     OK.forEach(it => {
       const p = pieces.find(q => q.it === it && q.type === 'path'), y = L.tt + L.rowH * (it.row + 2);
-      ctx.strokeStyle = `rgba(143,160,214,${.1 * tbl * clamp(p.a, 0, 1) * clamp(p.u, 0, 1)})`;
+      ctx.strokeStyle = THEME.a('gray', .1 * tbl * clamp(p.a, 0, 1) * clamp(p.u, 0, 1));
       ctx.beginPath(); ctx.moveTo(L.tx0 + 6, y); ctx.lineTo(L.tx0 + L.tw - 6, y); ctx.stroke();
     });
   }
@@ -454,17 +447,17 @@ function drawTable() {
     const x0 = L.tx0, y0 = L.tt, cw = L.xtCol, rh = L.xtRow;
     const hy = y0 + rh * .5;
     SPEAKERS.forEach((s, c) => drawLabel(s, x0 + L.xtLab + cw * (c + .5), hy, xt, COL.speaker, fs * .9, 'center'));
-    drawLabel('All', x0 + L.xtLab + cw * (SPEAKERS.length + .5), hy, xt, '#c9d3f5', fs * .9, 'center');
+    drawLabel('All', x0 + L.xtLab + cw * (SPEAKERS.length + .5), hy, xt, THEME.ink, fs * .9, 'center');
     [...CLASSES, 'All'].forEach((c, r) => {
       const y = y0 + rh * (r + 1);
-      drawLabel(c, x0 + L.pc, y + rh / 2, xt, c === 'All' ? '#c9d3f5' : COL.label, fs * .9);
+      drawLabel(c, x0 + L.pc, y + rh / 2, xt, c === 'All' ? THEME.ink : COL.label, fs * .9);
       for (let k = 0; k <= SPEAKERS.length; k++) {
         const isAll = c === 'All' || k === SPEAKERS.length;
         const n = c === 'All' ? (k === SPEAKERS.length ? OK.length : colTotal(SPEAKERS[k])) : (k === SPEAKERS.length ? rowTotal(c) : COUNT[c][SPEAKERS[k]]);
         const x = x0 + L.xtLab + cw * k;
         ctx.globalAlpha = xt; rr(x + 2, y + 2, cw - 4, rh - 4, 6);
-        ctx.fillStyle = isAll ? 'rgba(157,184,255,.10)' : `rgba(59,123,255,${.07 + .6 * n / MAXC})`; ctx.fill(); ctx.globalAlpha = 1;
-        drawLabel(String(n), x + cw / 2, y + rh / 2, xt * (n === 0 ? .45 : 1), isAll ? '#c9d3f5' : '#e8eeff', fs, 'center');
+        ctx.fillStyle = isAll ? THEME.a('gray', .10) : THEME.a('link', .07 + .6 * n / MAXC); ctx.fill(); ctx.globalAlpha = 1;
+        drawLabel(String(n), x + cw / 2, y + rh / 2, xt * (n === 0 ? .45 : 1), isAll ? THEME.ink : THEME.ink, fs, 'center');
       }
     });
   }
@@ -474,18 +467,18 @@ function drawTable() {
   const cnt = L.counter; ctx.font = `${fs}px ${MONO}`;
   const nW = ctx.measureText(String(arrived)).width, lW = ctx.measureText('Clips: ').width;
   const x = cnt.align === 'right' ? cnt.x - nW - lW : cnt.x;
-  drawLabel('Clips: ', x, cnt.y, fa, '#8fa0d6', fs); drawLabel(String(arrived), x + lW, cnt.y, fa, '#e8eeff', fs * 1.1);
+  drawLabel('Clips: ', x, cnt.y, fa, THEME.muted, fs); drawLabel(String(arrived), x + lW, cnt.y, fa, THEME.ink, fs * 1.1);
   ctx.restore();
 }
 
 function drawZone() {
   const z = A.zone; if (z < .01) return; const b = L.zone;
   ctx.globalAlpha = z; rr(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, 12);
-  ctx.fillStyle = 'rgba(4,10,42,.35)'; ctx.fill(); ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(143,160,214,.45)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(b.split, b.y0 + (narrow ? 34 : 34)); ctx.lineTo(b.split, b.y1 - 10); ctx.strokeStyle = 'rgba(143,160,214,.2)'; ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = THEME.a('bgGlow', .35); ctx.fill(); ctx.setLineDash([6, 5]); ctx.strokeStyle = THEME.a('gray', .45); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(b.split, b.y0 + (narrow ? 34 : 34)); ctx.lineTo(b.split, b.y1 - 10); ctx.strokeStyle = THEME.a('gray', .2); ctx.stroke(); ctx.globalAlpha = 1;
   const sm = Math.max(10.5, fs * .8);
-  drawLabel('null · never enters df', b.x0 + 12, b.y0 + 16, z, '#c9d3f5', sm);
-  const two = (t1, t2, x) => { drawLabel(t1, x, b.y0 + 34, z, '#8fa0d6', sm); if (t2) drawLabel(t2, x, b.y0 + 34 + sm + 3, z, '#8fa0d6', sm); };
+  drawLabel('null · never enters df', b.x0 + 12, b.y0 + 16, z, THEME.ink, sm);
+  const two = (t1, t2, x) => { drawLabel(t1, x, b.y0 + 34, z, THEME.muted, sm); if (t2) drawLabel(t2, x, b.y0 + 34 + sm + 3, z, THEME.muted, sm); };
   if (narrow) { two('Ignored labels:', 'not in CLASSES', b.x0 + 12); two('Skipped:', 'wrong file name', b.split + 10); }
   else { two('Ignored labels: not in CLASSES', '', b.x0 + 12); two('Skipped: wrong file name', '', b.split + 12); }
 }
@@ -505,10 +498,9 @@ function drawPieces() {
       const on = dimOn && act.it === it && act.seg === s;
       if (on) {
         ctx.save(); ctx.globalAlpha = a0; rr(p.x + s.x0 - 4, p.y - lh / 2 + 2, s.w + 8, lh - 4, 7);
-        ctx.fillStyle = rgba(c, .2); ctx.shadowColor = rgba(c, 1); ctx.shadowBlur = 16; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = rgba(c, .9); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+        ctx.fillStyle = fromRgb(c, .95); ctx.shadowColor = fromRgb(c, 1); ctx.shadowBlur = 16; ctx.fill(); ctx.shadowBlur = 0; ctx.restore();
       }
-      ctx.globalAlpha = a0 * dim * (it.kind !== 'ok' ? 1 - .35 * g : 1); ctx.fillStyle = rgba(c, 1);
-      if (on) { ctx.shadowColor = rgba(c, 1); ctx.shadowBlur = 10; }
+      ctx.globalAlpha = a0 * dim * (it.kind !== 'ok' ? 1 - .35 * g : 1); ctx.fillStyle = on ? THEME.onNeon : fromRgb(c, 1);
       ctx.fillText(s.t, p.x + s.x0, p.y); ctx.shadowBlur = 0;
     });
     ctx.globalAlpha = 1;

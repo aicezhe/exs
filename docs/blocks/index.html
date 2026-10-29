@@ -4,26 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>exs</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Monoton&family=Orbitron:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="./_shared/theme.css">
 <style>
-  :root {
-    --bg0: #030720;
-    --link: #3b7bff;
-    --pink: #ff4fa3;
-    --setting: #9db8ff;
-    --ink: #e8eeff;
-    --muted: #8fa0d6;
-    --panel: rgba(8, 16, 64, .72);
-    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --disp: Monoton, Orbitron, system-ui, sans-serif;
-    --label: Orbitron, system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg0); color: var(--ink);
-    font-family: var(--label); }
-  body { background: radial-gradient(ellipse at 50% 35%, #0d1b6b 0%, #07103f 45%, #030720 100%) fixed; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+    font-family: var(--body); }
+  body { background: var(--page-bg) fixed; }
   canvas#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   a { color: inherit; text-decoration: none; }
 
@@ -36,14 +22,14 @@
   .view:not(#home) > :not(.topbar) { width: 100%; max-width: 1600px; margin-left: auto; margin-right: auto; }
   .view:not(#home) h2 { margin-top: clamp(28px, 7vh, 80px); }
   .hero { margin: 0; }
-  .wordmark { margin: 0; font: 400 clamp(48px, 7vw, 84px)/1 var(--disp); letter-spacing: 0; color: var(--ink); }
+  .wordmark { margin: 0; font: 700 clamp(56px, 8vw, 104px)/1 var(--head); letter-spacing: -.03em; color: var(--ink); }
   .wordmark .l { display: inline-block; }
-  /* the pink dot is drawn, not typed */
-  .wordmark .dot { width: .14em; height: .14em; margin-left: .1em; border-radius: 50%; background: var(--pink); box-shadow: 0 0 .25em rgba(255, 79, 163, .7); }
+  /* the neon dot is drawn, not typed */
+  .wordmark .dot { width: .14em; height: .14em; margin-left: .06em; border-radius: 50%; background: var(--neon); box-shadow: 0 0 .3em var(--neon); }
   .lede { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
   .etym, .said { margin: 0; font-size: clamp(12px, 1.2vw, 15px); line-height: 1.5; }
   .etym { color: var(--muted); }
-  .etym i { font-style: italic; }
+  .etym i { font: 400 .92em var(--mono); font-style: normal; color: var(--ink); } /* Space Grotesk has no italic: the Latin word is set in JetBrains Mono */
   .said { color: var(--ink); }
   /* once per visit, the first time the home view shows (JS adds .intro): letters rise one after another, then the lines fade in */
   .intro .wordmark .l { animation: letter .55s ease both; animation-delay: calc(var(--i) * 80ms); }
@@ -55,27 +41,28 @@
   .view.on { display: flex; flex-direction: column; flex: 1; min-height: 0; animation: rise .4s ease both; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-  /* Home: What. Why. How. side by side; white at rest, pink with a glow and larger on hover, caption fades in below */
+  /* Home: What. Why. How. side by side; white at rest, neon with a glow and larger on hover, caption fades in below */
   .rows { flex: 1; display: flex; align-items: center; justify-content: center; gap: clamp(20px, 4vw, 72px); flex-wrap: wrap; padding: 32px 0; }
   .row { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 4px; outline: none; }
-  .row .big { font: 700 clamp(36px, 6.4vw, 92px)/1.1 var(--label); color: var(--ink);
+  .row .big { font: 700 clamp(36px, 6.4vw, 92px)/1.1 var(--head); color: var(--ink);
     transition: transform .3s ease, color .3s ease, text-shadow .3s ease; }
-  .row .cap { color: var(--muted); font: 400 clamp(12px, 1.3vw, 16px)/1.4 var(--label); text-align: center; opacity: 0;
+  .row .cap { color: var(--muted); font: 400 clamp(12px, 1.3vw, 16px)/1.4 var(--body); text-align: center; opacity: 0;
     transform: translateY(-6px); transition: opacity .3s ease, transform .3s ease; }
-  .row:hover .big, .row:focus-visible .big { transform: scale(1.18); color: var(--pink);
-    text-shadow: 0 0 14px rgba(255, 79, 163, .85), 0 0 40px rgba(255, 79, 163, .5); }
+  .row:hover .big, .row:focus-visible .big { transform: scale(1.18); color: var(--neon);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--neon) 85%, transparent), 0 0 40px color-mix(in srgb, var(--neon) 50%, transparent); }
   .row:hover .cap, .row:focus-visible .cap { opacity: 1; transform: none; }
   @media (hover: none) { .row .cap { opacity: .8; transform: none; } } /* touch: no hover, so the captions stay visible */
 
   /* Panels */
   .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-  .mini { font: 600 14px/1 var(--mono); color: var(--muted); letter-spacing: -.02em; }
-  .back { display: inline-block; margin: 0; padding: 8px 14px; border: 1px solid rgba(143, 160, 214, .35);
-    border-radius: 999px; color: var(--muted); font-size: 14px; transition: border-color .2s, color .2s; }
-  .back:hover, .back:focus-visible { color: var(--ink); border-color: var(--pink); outline: none; }
-  h2 { margin: 14px 0 6px; font-size: clamp(40px, 8vw, 84px); line-height: 1.05; font-weight: 600; letter-spacing: -.02em; }
+  .mini { font: 700 14px/1 var(--mono); color: var(--muted); letter-spacing: -.02em; }
+  .back { display: inline-block; margin: 0; padding: 8px 14px; border: 1px solid var(--neon);
+    border-radius: 999px; color: var(--ink); font-size: 14px; transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  h2 { margin: 14px 0 6px; font: 700 clamp(40px, 8vw, 84px)/1.05 var(--head); letter-spacing: -.02em; }
   .lead { margin: 0 0 26px; color: var(--muted); font-size: 16px; max-width: 60ch; }
-  .empty { padding: 26px; border: 1px dashed rgba(143, 160, 214, .4); border-radius: 14px; color: var(--muted); max-width: 520px; }
+  .empty { padding: 26px; border: 1px dashed color-mix(in srgb, var(--gray) 40%, transparent); border-radius: 14px; color: var(--muted); max-width: 520px; }
 
   /* Block cards */
   .grid { display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(104px, 1fr); gap: clamp(12px, 1.6vw, 24px); flex: 1; margin-top: clamp(12px, 3vh, 36px); }
@@ -83,17 +70,17 @@
   @media (min-width: 800px) { .grid { grid-template-columns: repeat(3, 1fr); } }
   @media (min-width: 1100px) { .grid { grid-template-columns: repeat(4, 1fr); } }
   .card { position: relative; display: flex; flex-direction: column; gap: 6px; padding: clamp(16px, 1.8vw, 24px);
-    border-radius: 14px; background: var(--panel); border: 1px solid rgba(59, 123, 255, .35);
+    border-radius: 14px; background: var(--panel); border: 1px solid color-mix(in srgb, var(--link) 45%, transparent);
     backdrop-filter: blur(4px); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
-  .card .n { font: 600 clamp(28px, 3vw, 40px)/1 var(--mono); color: var(--pink); }
-  .card .t { font-size: clamp(18px, 1.7vw, 24px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 76px; margin-top: auto; }
+  .card .n { font: 700 clamp(28px, 3vw, 40px)/1 var(--mono); color: var(--neon); }
+  .card .t { font: 600 clamp(18px, 1.7vw, 24px)/1.25 var(--head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 76px; margin-top: auto; }
   .card .s { font-size: clamp(13.5px, 1.1vw, 16px); color: var(--muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .card .chip { position: absolute; top: 14px; right: 14px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(157, 184, 255, .5); color: var(--setting); }
-  a.card:hover, a.card:focus-visible { transform: translateY(-3px); border-color: var(--pink);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, .4), 0 0 24px rgba(255, 79, 163, .2); outline: none; }
+    padding: 3px 8px; border-radius: 999px; background: var(--neon); color: var(--on-neon); font: 700 11px var(--mono); letter-spacing: .1em; }
+  a.card:hover, a.card:focus-visible { transform: translateY(-3px); border-color: var(--panel-border);
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--bg) 40%, transparent), var(--panel-glow); outline: none; }
   .card.soon { opacity: .5; border-style: dashed; }
-  .card.soon .chip { border-color: rgba(143, 160, 214, .3); color: var(--muted); }
+  .card.soon .chip { background: transparent; border: 1px solid var(--dim); color: var(--muted); }
   .card.soon .n { color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { .view.on, .intro .wordmark .l, .intro .fade { animation: none; } .card, .row .big, .row .cap { transition: none; } }
 </style>
@@ -136,6 +123,7 @@
   </section>
 </main>
 
+<script src="./_shared/theme.js"></script>
 <script>
 (() => {
 'use strict';
@@ -207,9 +195,9 @@ function tick() {
   for (const d of dots) { if (!reduce) { d.x += d.vx; d.y += d.vy; } if (d.x < 0 || d.x > W) d.vx *= -1; if (d.y < 0 || d.y > H) d.vy *= -1; }
   for (let i = 0; i < dots.length; i++) for (let j = i + 1; j < dots.length; j++) {
     const a = dots[i], b = dots[j], dist = Math.hypot(a.x - b.x, a.y - b.y);
-    if (dist < 150) { ctx.strokeStyle = `rgba(59,123,255,${0.22 * (1 - dist / 150)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    if (dist < 150) { ctx.strokeStyle = THEME.a('link', 0.22 * (1 - dist / 150)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
   }
-  ctx.fillStyle = 'rgba(130,175,255,.55)';
+  ctx.fillStyle = THEME.a('link', .55);
   for (const d of dots) { ctx.beginPath(); ctx.arc(d.x, d.y, 1.6, 0, 6.283); ctx.fill(); }
   requestAnimationFrame(tick);
 }

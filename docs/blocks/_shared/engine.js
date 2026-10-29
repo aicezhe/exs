@@ -7,16 +7,16 @@ const BASE = document.currentScript.src.replace(/[^/]*$/, ""); // this folder, f
 const TIMES = { t: [0.18, 0.25], a: [0.52, 0.66], m: [0.67, 0.80] };
 const WORD_SLOW = 10;  // the 1 s word plays over 10 s on screen
 const SLOWDOWN = 100;  // tone frequencies are shown 100 times lower: 200 Hz looks like 2 waves a second
-/* ---------- 1. colour tokens read from CSS ---------- */
+/* ---------- 1. colour tokens, from THEME (theme.js) ---------- */
+// roles: raw sound = gray (cyan, acc), processing = link green (proc), selected / answers = neon (sig)
 let C = {};
 function readTheme() {
-  const s = getComputedStyle(document.documentElement), v = k => s.getPropertyValue(k).trim();
-  C = { bg: v("--bg"), surface: v("--surface"), ink: v("--ink"), muted: v("--muted"), line: v("--line"), acc: v("--accent"),
-    sig: v("--signal"), cyan: v("--cyan"), lo: v("--heat-lo"), mid: v("--heat-mid"), hi: v("--heat-hi") };
+  C = { bg: THEME.bg, surface: THEME.bgGlow, ink: THEME.ink, muted: THEME.muted, line: THEME.dim, acc: THEME.gray,
+    sig: THEME.neon, cyan: THEME.gray, proc: THEME.link, lo: THEME.bgGlow, mid: THEME.neon, hi: THEME.ink };
   C.loRGB = hex(C.lo); C.midRGB = hex(C.mid); C.hiRGB = hex(C.hi);
 }
 function hex(h) { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-function alpha(col, a) { const [r, g, b] = hex(col); return `rgba(${r},${g},${b},${a})`; }
+function alpha(col, a) { return THEME.fromRgb(hex(col), a); }
 
 /* ---------- text ---------- */
 const TXT = {
@@ -139,9 +139,9 @@ function resize() {
   TOP = Math.round(Math.max(FS * 3, 40)); // room for the scene title row
   W = w; VH = h; H = Math.max(120, h - BAND - TOP);
 }
-// mono = numbers, disp = Monoton for key headings, default = Orbitron labels
-const font = (s, w, mono, disp) => disp ? `400 ${s}px Monoton, Orbitron, system-ui, sans-serif`
-  : `${w || 400} ${s}px ${mono ? '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace' : 'Orbitron, system-ui, -apple-system, "Segoe UI", Arial, sans-serif'}`;
+// mono = numbers (JetBrains Mono), disp = key headings (Space Grotesk), default = labels (system font)
+const font = (s, w, mono, disp) => disp ? `700 ${s}px ${THEME.head}`
+  : `${mono && w > 400 ? 700 : w || 400} ${s}px ${mono ? THEME.mono : THEME.body}`;
 function text(s, X, Y, o = {}) {
   g.font = font(o.size || FS, o.w, o.mono, o.disp); g.fillStyle = o.c || C.muted; g.textAlign = o.a || "left"; g.textBaseline = o.b || "alphabetic"; o.max ? g.fillText(s, X, Y, o.max) : g.fillText(s, X, Y);
 }
@@ -155,7 +155,7 @@ function glow(col, blur, draw) { g.shadowColor = col; g.shadowBlur = blur; draw(
 function ramp(t) {
   t = Math.max(0, Math.min(1, t));
   const [a, b, k] = t < .5 ? [C.loRGB, C.midRGB, t * 2] : [C.midRGB, C.hiRGB, (t - .5) * 2];
-  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(",")})`;
+  return THEME.fromRgb(a.map((v, i) => Math.round(v + (b[i] - v) * k)), 1);
 }
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -323,7 +323,7 @@ setTimelines();
 
 // "what the wave is made of": the current frame's tones as thin lines over the summed wave (toReal: graph time → word time)
 let showTones = false;
-const TONE_COL = () => [C.sig, C.cyan, C.muted, C.ink, alpha(C.sig, .55)];
+const TONE_COL = () => [C.sig, C.proc, C.cyan, C.ink, alpha(C.sig, .55)];
 function drawTones(map, te, toReal, yc, amp, x0, x1, top) {
   if (!WORD || !showTones) return;
   const tr = toReal(te); if (!(tr >= 0 && tr < 1)) return;
@@ -341,8 +341,21 @@ function drawTones(map, te, toReal, yc, amp, x0, x1, top) {
 }
 
 // Neon profile frames, drawn additively; 535 × 640 each.
-const FACE = {};
-if (PAGE.first === 0) ["m", "t", "a"].forEach(k => { const i = new Image(); i.src = BASE + "assets/face_" + k + "_pink.png"; FACE[k] = i; }); // all-pink copies of the frames
+// The frames are artwork drawn in pink (assets/*_pink.png). Temporary recolour to the neon green: hue-rotate (a canvas filter) on an off-screen copy made once;
+// where canvas filters are missing (older Safari) the copy is a plain neon silhouette of the same alpha.
+const FACE = {}; // FACE[k] = { el: the recoloured canvas, ok }
+function neonFace(img) {
+  const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const x = c.getContext("2d");
+  if ("filter" in x) { x.filter = "hue-rotate(141deg) saturate(1.3)"; x.drawImage(img, 0, 0); x.filter = "none"; }
+  else { x.drawImage(img, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = THEME.neon; x.fillRect(0, 0, c.width, c.height); }
+  return c;
+}
+if (PAGE.first === 0) ["m", "t", "a"].forEach(k => {
+  const i = new Image(), f = FACE[k] = { el: null, ok: false };
+  i.onload = () => { f.el = neonFace(i); f.ok = true; };
+  i.src = BASE + "assets/face_" + k + "_pink.png"; // the pink artwork
+});
 
 /* ---- the air: Poisson-disc points, each with its own phase, size and slow wander ---- */
 const PMAX = 2000;
@@ -468,8 +481,8 @@ function recordPressure(t, v) {
   prLast = t; PRT[prHead] = t; PRV[prHead] = v; prHead = (prHead + 1) % PRN; prCount = Math.min(PRN, prCount + 1);
 }
 const LV_ALPHA = [.22, .36, .55, .78, 1], LV_SIZE = [.7, .85, 1, 1.18, 1.35];
-let COL1 = null; // the sounds' colours (t pink, a white, m cyan), made once from the theme
-const SND_COL = () => COL1 || (COL1 = { t: C.sig, a: C.ink, m: C.cyan });
+let COL1 = null; // the sounds' colours (t neon, a white, m green), made once from the theme
+const SND_COL = () => COL1 || (COL1 = { t: C.sig, a: C.ink, m: C.proc });
 
 // the word TELEGRAM: the lit letter white with a glow and a short bar under it, the others dimmed; one short line under it
 const WORD1 = ["T", "E", "L", "E", "G", "R", "A", "M"];
@@ -506,8 +519,8 @@ function sceneAir(p) {
   const cur = segFace(seg), prevSeg = SEG1[Math.max(0, SEG1.indexOf(seg) - 1)], prev = seg === SEG1[0] ? cur : segFace(prevSeg);
   const fade = clamp((t - seg.s) / .18, 0, 1);
   g.save(); g.globalCompositeOperation = "lighter";
-  if (prev !== cur && fade < 1 && FACE[prev].complete && FACE[prev].naturalWidth) { g.globalAlpha = 1 - fade; g.drawImage(FACE[prev], fx, fy, fw, fh); }
-  if (FACE[cur].complete && FACE[cur].naturalWidth) { g.globalAlpha = prev !== cur ? fade : 1; g.drawImage(FACE[cur], fx, fy, fw, fh); }
+  if (prev !== cur && fade < 1 && FACE[prev].ok) { g.globalAlpha = 1 - fade; g.drawImage(FACE[prev].el, fx, fy, fw, fh); }
+  if (FACE[cur].ok) { g.globalAlpha = prev !== cur ? fade : 1; g.drawImage(FACE[cur].el, fx, fy, fw, fh); }
   g.restore();
 
   // the wave: from the source point (mouth or nose), the same signal everywhere, delayed by distance / v
@@ -566,7 +579,7 @@ function sceneAir(p) {
       g.fillStyle = alpha(col[k], on ? .1 : .04); g.fillRect(map(s0), Yc - SA - 4, map(s1) - map(s0), SA * 2 + 8);
       line(map(s0), Yc - SA - 4, map(s0), Yc + SA + 4, C.line, 1, [3, 4]); line(map(s1), Yc - SA - 4, map(s1), Yc + SA + 4, C.line, 1, [3, 4]);
       // the sound's name inside the segment, top left; the sounding one in its colour, glowing
-      g.font = '600 14px "Space Grotesk", system-ui, sans-serif'; g.textAlign = "left"; g.textBaseline = "top";
+      g.font = `700 14px ${THEME.head}`; g.textAlign = "left"; g.textBaseline = "top";
       if (on) glow(col[k], 10, () => { g.fillStyle = col[k]; g.fillText(k, map(s0) + 8, Yc - SA - 4 + 8); });
       else { g.fillStyle = SEG_LABEL; g.fillText(k, map(s0) + 8, Yc - SA - 4 + 8); }
       g.textBaseline = "alphabetic";
@@ -709,10 +722,10 @@ function sceneSamples(p, T) {
   });
   const Xc = sxp(kk), Yc = syp(x[start + kk]);
   addScrub(X0, X1, Y0 - 6, Y1 + 6, Xc, X => easeInv(clamp((Math.round((X - X0) / (X1 - X0) * (K - 1)) + .5) / (K - 1), 0, 1)) / 1.15 * DUR[2]);
-  line(Xc, Y0 - 6, Xc, Y1 + 6, C.acc, 1.2, [3, 4]);
-  g.beginPath(); g.arc(Xc, Yc, 5.5, 0, 7); g.strokeStyle = C.acc; g.lineWidth = 2; g.stroke();
+  line(Xc, Y0 - 6, Xc, Y1 + 6, C.sig, 1.2, [3, 4]);
+  g.beginPath(); g.arc(Xc, Yc, 5.5, 0, 7); g.strokeStyle = C.sig; g.lineWidth = 2; g.stroke();
   g.globalAlpha = 1;
-  if (sel !== null) { // the selected sample: a thicker stem, a larger white point with a pink ring, and its card
+  if (sel !== null) { // the selected sample: a thicker stem, a larger white point with a neon ring, and its card
     const sx = sxp(sel), v = x[start + sel], sy = syp(v);
     glow(C.sig, 10, () => line(sx, yc, sx, sy, C.sig, 3));
     g.beginPath(); g.arc(sx, sy, 6.5, 0, 7); g.fillStyle = C.ink; g.fill(); g.strokeStyle = C.sig; g.lineWidth = 2.5; g.stroke();
@@ -843,9 +856,9 @@ function sceneFrames(p, T) {
   let peak = 0; for (let k = 0; k < WIN; k++) peak = Math.max(peak, Math.abs(x[st + k]));
   const sc = .9 / Math.max(.05, peak);
   g.beginPath(); for (let k = 0; k < WIN; k++) { const Y = zc - x[st + k] * sc * ZA; k ? g.lineTo(zx(k), Y) : g.moveTo(zx(k), Y); }
-  g.strokeStyle = alpha(C.muted, .5); g.lineWidth = 1.2; g.stroke();
+  g.strokeStyle = alpha(C.cyan, .6); g.lineWidth = 1.2; g.stroke();
   g.beginPath(); for (let k = 0; k < WIN; k++) { const Y = zc - x[st + k] * hann[k] * sc * ZA; k ? g.lineTo(zx(k), Y) : g.moveTo(zx(k), Y); }
-  glow(C.cyan, 11, () => { g.strokeStyle = C.acc; g.lineWidth = 2; g.stroke(); });
+  glow(C.proc, 11, () => { g.strokeStyle = C.proc; g.lineWidth = 2; g.stroke(); });
   g.beginPath(); for (let k = 0; k < WIN; k++) { const Y = Z1 - hann[k] * (Z1 - Z0); k ? g.lineTo(zx(k), Y) : g.moveTo(zx(k), Y); }
   g.strokeStyle = C.sig; g.lineWidth = 1.2; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);
   const capA = clamp(1 - (p - .22) / .1, 0, 1); // the opening caption: it stays for the first part of the scene, then fades
@@ -854,8 +867,8 @@ function sceneFrames(p, T) {
     g.globalAlpha = capA; rrect(W / 2 - cw / 2, cy - FS * 1.1, cw, FS * 2.2, 8); g.fillStyle = C.bg; g.fill(); g.strokeStyle = C.line; g.lineWidth = 1; g.stroke();
     text(L.frameCap, W / 2, cy, { a: "center", b: "middle", c: C.ink, w: 600, size: FS * 1.15 }); g.globalAlpha = 1;
   }
-  text("— " + L.raw, X0 + 4, Z0 - 14, { c: C.muted });
-  text("— " + L.win, X0 + 4 + W * .16, Z0 - 14, { c: C.acc, w: 600 });
+  text("— " + L.raw, X0 + 4, Z0 - 14, { c: C.cyan });
+  text("— " + L.win, X0 + 4 + W * .16, Z0 - 14, { c: C.proc, w: 600 });
   text("- - " + L.hann, X0 + 4 + W * .34, Z0 - 14, { c: C.sig, w: 600 });
   text(L.frame + " " + (i + 1) + " / " + NFR, X1, Z0 - 14, { a: "right", c: C.ink, w: 600, mono: true });
 }
@@ -873,7 +886,7 @@ function sceneMFCC(p, T) {
   line(mA, P1, mB, P1, C.line, 1);
   for (let b = 0; b < NMEL; b++) {
     const v = clamp((MEL[i][b] - melMin) / (melMax - melMin), 0, 1), h = v * (P1 - P0);
-    g.fillStyle = alpha(C.acc, .35 + .6 * v); g.fillRect(mA + b * bw + 1, P1 - h, Math.max(1, bw - 2), h);
+    g.fillStyle = alpha(C.proc, .35 + .6 * v); g.fillRect(mA + b * bw + 1, P1 - h, Math.max(1, bw - 2), h);
   }
   text(L.mel, mA, P0 - 12, { c: C.ink, w: 600 });
   text(L.low, mA, P1 + FS * 1.6); text(L.high, mB, P1 + FS * 1.6, { a: "right" });
@@ -949,7 +962,7 @@ syncMode();
 function playLetter(k) { if (step === 0 && manual) man = { k, t: zone1(k)[0] }; }
 // a graph segment: manual mode plays its sound; auto mode jumps the loop to it
 function playSeg(k) { if (step !== 0) return; if (manual) man = { k, t: zone1(k)[0] }; else local = zone1(k)[0]; }
-const SEG_LABEL = "#8E95D8"; // segment names at rest
+const SEG_LABEL = THEME.muted; // segment names at rest
 let segOn = false; // set by scene 1 each frame while its graph can be clicked
 const SEGBTN = {};
 KEYS.forEach(k => {
@@ -990,7 +1003,7 @@ cv.addEventListener("pointerdown", startScrub);
 window.addEventListener("pointermove", e => { if (scrub) scrubTo(e); });
 window.addEventListener("pointerup", () => { scrub = null; }); window.addEventListener("pointercancel", () => { scrub = null; });
 cv.addEventListener("pointerdown", e => { if (step === 2 && !playing && !onBar(e) && !scrub) sel = sampleAt(e); }); // scene 3, paused: pick a sample (empty space clears)
-// scene 4, paused: the loupe follows the pointer over the graph; the pink line can be dragged; wheel or pinch zooms
+// scene 4, paused: the loupe follows the pointer over the graph; the neon line can be dragged; wheel or pinch zooms
 const PTRS = new Map(); let pinch0 = 0, span0 = 32;
 const secPos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top - TOP]; };
 const overSec = (X, Y) => SEC && X >= SEC.X0 - 4 && X <= SEC.X1 + 4 && Y >= SEC.Y0 - 10 && Y <= SEC.Y1 + 10;
@@ -1058,7 +1071,7 @@ document.addEventListener("keydown", e => {
   else if (/^[tam]$/i.test(e.key)) playLetter(e.key.toLowerCase());
 });
 
-// Same on every page: the step title centred on top (number in pink, title in white) between the ← and → buttons (HTML);
+// Same on every page: the step title centred on top (number in neon, title in white) between the ← and → buttons (HTML);
 // at the bottom a small footnote at the left, the mode switch at the right (HTML) and the progress line at the very bottom.
 const FOOT = [true, true, false, false, false, false]; // pages with the "slowed down" footnote
 const INSET = 16, BTN = 36; // corner inset and button height, as in style.css: the title and the footnote line up with the buttons
@@ -1094,7 +1107,7 @@ function frame(now) {
   if (tonesBtn.title !== TXT[lang].L.parts) { tonesBtn.title = TXT[lang].L.parts; tonesBtn.setAttribute("aria-label", TXT[lang].L.parts); }
   if (modeBtn.hidden !== (step !== 0)) { modeBtn.hidden = step !== 0; playBtn.hidden = step === 0; } // mode switch on page 1, play / pause elsewhere
   const p = clamp((step === 0 && manual ? man.t : local) / DUR[step], 0, 1);
-  g.fillStyle = C.bg; g.fillRect(0, 0, W, VH);
+  g.clearRect(0, 0, W, VH); // transparent: the page gradient shows through
   drawTitle();
   segOn = false; SCRUBS = [];
   g.save(); g.translate(0, TOP); SCENES[step](p, clock); g.restore(); // every scene draws in its own W x H area under the title
