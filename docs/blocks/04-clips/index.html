@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block 3 · Clips</title>
+<title>Block 4 · Clips</title>
 <style>
   :root {
     --bg0: #030720;
@@ -46,7 +46,12 @@
   #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
   #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; border-color: rgba(255, 79, 163, .7) !important;
     box-shadow: 0 0 22px rgba(255, 79, 163, .25); }
+  #nav button[hidden] { display: none; }
   #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
+  #onward { height: 44px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 22px; white-space: nowrap; font-size: 14px; color: var(--ink);
+    text-decoration: none; background: rgba(8, 16, 64, .72); border: 1px solid rgba(255, 79, 163, .7); box-shadow: 0 0 18px rgba(255, 79, 163, .25); }
+  #onward[hidden] { display: none; }
+  #onward:hover, #onward:focus-visible { border-color: var(--pink); outline: none; }
   #dots { display: flex; gap: 8px; }
   #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
   #dots i.on { background: var(--pink); border-color: var(--pink); box-shadow: 0 0 8px var(--pink); }
@@ -89,8 +94,8 @@
 <canvas id="c" aria-label="Clips: every recording is forced to exactly 1 second"></canvas>
 
 <div class="hud tl" id="hud">
-  <a class="back" href="../#how">← all blocks</a>
-  <div class="kicker">Block 3 of 12</div>
+  <a class="back" href="../#how">← all blocks</a> <a class="back" href="../03-sound/">← Previous: Sound</a>
+  <div class="kicker">Block 4 of 12</div>
   <h1>Clips</h1>
   <div class="sub">notebook cell 2 · tap or drag</div>
 </div>
@@ -109,6 +114,7 @@
   <button id="prev" type="button" aria-label="Previous step">←</button>
   <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <button id="next" type="button" aria-label="Next step">→</button>
+  <a id="onward" href="../05-mfcc/" hidden>Next block: MFCC →</a>
 </nav>
 <div id="card" role="status" aria-live="polite"></div>
 
@@ -129,9 +135,9 @@ const DRAW_RATE = 800;                       // drawn samples per second
 const N_WIN = Math.round(DRAW_RATE * CLIP_SECONDS); // window length in drawn samples
 
 const CAPTIONS = [
-  'load_clip: resample to 16 kHz, mono. Then every clip is forced to exactly 1 s.',
+  'librosa.load gives 16 kHz, mono. Now every clip must be exactly 1 s.',
   'Prefix sums give the energy of every window in one pass.',
-  'np.pad adds zeros at the end, so the word is always at the start of short clips.',
+  'np.pad adds zeros at the end, so the word sits at the start of short clips.',
   'Audio array: (N, 16000)',
 ];
 const CODE = ['cs = cumsum(y**2)', 'energy = cs[N:] - cs[:-N]', 'start = argmax(energy)'];
@@ -330,6 +336,7 @@ function syncUI() {
   capEl.textContent = CAPTIONS[step];
   dots.forEach((d, i) => d.classList.toggle('on', i === step));
   prevBtn.disabled = step === 0; nextBtn.disabled = step === 3;
+  $('onward').hidden = step !== 3; nextBtn.hidden = step === 3; // the last step: the way on replaces →
   toolsEl.classList.toggle('on', step === 1);
 }
 prevBtn.addEventListener('click', () => setStep(step - 1));
@@ -431,7 +438,7 @@ function cardFor(a) {
       text: 'Longer than 1 s: keep the loudest window. Shorter: pad with silence.', cls: '' };
   }
   if (a.kind === 'word') return { tag: 'why it matters', h2: 'Where the word sits', code: 'start = argmax(energy)',
-    text: 'In training the word sits near the centre. On the board the word can fall anywhere in the window. Time-shift augmentation covers this.', cls: '' };
+    text: 'In training the word sits near the centre. On the board it can fall anywhere in the window. Time-shift augmentation covers this.', cls: '' };
   if (a.kind === 'pad') {
     const n = Math.round(SHORT.sec * SAMPLE_RATE);
     return { tag: 'zeros: silence', h2: `${N_SAMPLES - n} zeros`, code: 'np.pad(y, (0, N - len(y)))',
