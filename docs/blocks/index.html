@@ -97,17 +97,11 @@
       </div>
     </section>
     <nav class="rows" aria-label="Sections">
-      <a class="row" href="#what"><span class="big">What.</span><span class="cap">what it does</span></a>
+      <a class="row" href="./what/index.html"><span class="big">What.</span><span class="cap">what it does</span></a>
       <a class="row" href="#why"><span class="big">Why.</span><span class="cap">why this project</span></a>
       <a class="row" href="#how"><span class="big">How.</span><span class="cap">how it works</span></a>
     </nav>
   </div>
-
-  <section class="view" data-view="what">
-    <div class="topbar"><a class="back" href="#">← back</a><span class="mini">exs</span></div>
-    <h2>What.</h2>
-    <div class="empty">Coming soon.</div>
-  </section>
 
   <section class="view" data-view="why">
     <div class="topbar"><a class="back" href="#">← back</a><span class="mini">exs</span></div>
@@ -150,13 +144,13 @@ BLOCKS.forEach((b, i) => {
   grid.appendChild(el);
 });
 
-/* ---- view routing by URL hash: #what, #why, #how (back button works) ---- */
+/* ---- view routing by URL hash: #why, #how (back button works) ---- */
 const views = [...document.querySelectorAll('.view')];
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let introDone = false;
 function route() {
   const h = location.hash.replace('#', '');
-  const name = ['what', 'why', 'how'].includes(h) ? h : '';
+  const name = ['why', 'how'].includes(h) ? h : '';
   views.forEach(v => v.classList.toggle('on', v.dataset.view === name));
   document.body.classList.toggle('home', name === '');
   if (name === '' && !introDone) { // the entrance plays once, never again when coming back to home
