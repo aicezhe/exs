@@ -136,7 +136,7 @@
    this array: nothing is typed in by hand.
 ------------------------------------------------------------------ */
 const CLASSES = ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
-const NEXT_BLOCK_READY = false;   // set to true when ../08-training/ exists
+const NEXT_BLOCK_READY = true;   // ../08-training/ exists
 const DEFAULTS = { f1: 8, f2: 16 };
 const layersFor = (f1, f2) => [
   { type: 'input', shape: [99, 13, 1] },
@@ -620,7 +620,7 @@ batchBtn.addEventListener('click', () => { ST.batch++; });
 prevBtn.addEventListener('click', () => go(step - 1)); nextBtn.addEventListener('click', () => go(step + 1));
 addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(step + 1); else if (e.key === 'ArrowLeft') go(step - 1); });
 addEventListener('resize', layout);
-if (NEXT_BLOCK_READY) { onwardEl.href = '../08-training/'; onwardEl.removeAttribute('aria-disabled'); }
+if (NEXT_BLOCK_READY) { onwardEl.href = '../08-training/index.html'; onwardEl.removeAttribute('aria-disabled'); }
 
 build(); syncUI(); layout();
 document.fonts && document.fonts.ready.then(layout);

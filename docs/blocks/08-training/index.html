@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 8 · Training</title>
+<link rel="stylesheet" href="../_shared/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--body); }
+  body { background: var(--page-bg); }
+  button { font: inherit; color: inherit; }
+
+  .hud { position: fixed; z-index: 2; top: 22px; left: 32px; right: 32px; pointer-events: none; }
+  .back { display: inline-block; margin: 0 0 10px; padding: 7px 14px; border: 1px solid var(--neon); border-radius: 999px; color: var(--ink);
+    font-size: 14px; text-decoration: none; pointer-events: auto; transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 6px 0 0; font: 700 clamp(22px, 3vw, 36px)/1.15 var(--head); letter-spacing: -.01em; }
+
+  /* parameters taken from the notebook: pills with a card on tap */
+  #params { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; pointer-events: auto; }
+  #params .src { font: 11px var(--mono); color: var(--muted); margin-right: 2px; }
+  .ppill { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--gray); background: color-mix(in srgb, var(--gray) 12%, transparent);
+    font: 12px var(--mono); cursor: pointer; transition: border-color .2s, box-shadow .2s; -webkit-tap-highlight-color: transparent; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+  .ppill b { color: var(--ink); font-weight: 700; }
+  .ppill span { color: var(--muted); }
+  .ppill:hover, .ppill:focus-visible, .ppill.on { border-color: var(--neon); box-shadow: 0 0 10px color-mix(in srgb, var(--neon) 35%, transparent); outline: none; }
+
+  /* scenes */
+  #stage { position: fixed; left: 0; right: 0; top: var(--top, 150px); bottom: 118px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+  .scene { display: none; width: min(1100px, calc(100% - 64px)); margin: 0 auto; min-height: 100%; }
+  .scene.on { display: block; animation: fadein .3s ease both; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  svg text { font-family: var(--mono); fill: var(--muted); }
+  .illus { display: inline-block; font: 11px var(--mono); color: var(--muted); border: 1px dashed var(--dim); border-radius: 6px; padding: 1px 7px; }
+  .row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .btn { height: 38px; padding: 0 16px; border-radius: 19px; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); cursor: pointer; font-size: 14px;
+    transition: box-shadow .2s, background .2s, color .2s; -webkit-tap-highlight-color: transparent; }
+  .btn:hover, .btn:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .btn:active, .btn[aria-pressed="true"] { background: var(--neon); color: var(--on-neon); }
+  .btn small { font: 11px var(--mono); opacity: .75; margin-left: 6px; }
+  .big { font: 700 clamp(22px, 4vw, 44px)/1.2 var(--mono); color: var(--ink); text-align: center; }
+  .big em { font-style: normal; color: var(--neon); }
+  .sub { font: 12.5px/1.4 var(--mono); color: var(--muted); text-align: center; }
+  .word { background: none; border: 0; padding: 0; cursor: pointer; border-bottom: 1px dashed var(--neon); color: var(--neon); font: inherit; }
+
+  .fig { display: block; width: 100%; height: auto; touch-action: pan-y; }
+  .bar, .mark { cursor: pointer; }
+
+  /* scene 2 */
+  #lossnum { font: 700 clamp(22px, 4vw, 36px) var(--mono); color: var(--neon); }
+  #slider { width: min(380px, 90%); accent-color: var(--neon); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+
+  /* scene 3 */
+  .fl { display: grid; gap: 4px; }
+  .fl .f { display: grid; gap: 1px; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; cursor: help; transition: background .2s, border-color .2s; }
+  .fl .f code { font: 14px/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+  .fl .f i { font: normal 11.5px var(--mono); color: var(--muted); }
+  .fl .f.hot, .fl .f:hover { background: color-mix(in srgb, var(--neon) 10%, transparent); border-color: var(--neon); }
+  .consts { font: 12.5px/1.5 var(--mono); color: var(--muted); margin: 8px 0 0; }
+  .consts b { color: var(--neon); }
+  .demo { margin-top: 14px; padding: 12px 14px; border: 1px dashed var(--dim); border-radius: 12px; }
+  .demo h3 { margin: 0 0 8px; font: 700 13px var(--mono); color: var(--ink); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .lrs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 6px 0; }
+  .hl { font: 12.5px var(--mono); color: var(--muted); text-align: center; min-height: 1.4em; }
+
+  /* scene 4: clips in three batches */
+  #batches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 12px 0; }
+  .batch { padding: 10px; border: 1.2px solid var(--dim); border-radius: 12px; transition: border-color .25s, background .25s, box-shadow .25s; cursor: pointer; }
+  .batch h4 { margin: 0 0 8px; font: 700 12px var(--mono); color: var(--muted); display: flex; justify-content: space-between; }
+  .batch .pills { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .cp { height: 12px; border-radius: 999px; border: 1px solid var(--gray); background: color-mix(in srgb, var(--gray) 14%, transparent); transition: background .25s, border-color .25s; }
+  .batch.seen { border-color: var(--link); }
+  .batch.seen .cp { background: var(--link); border-color: var(--link); }
+  .batch.hot { border-color: var(--neon); background: color-mix(in srgb, var(--neon) 8%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--neon) 22%, transparent); }
+  .batch.hot h4 { color: var(--neon); }
+  .batch.hot .cp { background: var(--neon); border-color: var(--neon); }
+  #upd { font: 700 clamp(22px, 3.4vw, 36px) var(--mono); color: var(--neon); text-align: center; min-height: 1.3em; margin-bottom: 8px; }
+  .formula { font: 700 clamp(14px, 2vw, 20px) var(--mono); text-align: center; margin-top: 14px; color: var(--ink); overflow-wrap: anywhere; }
+
+  /* scene 5 */
+  .s5 { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 20px; align-items: start; }
+  #pat { padding: 14px; border: 1.2px solid var(--dim); border-radius: 12px; text-align: center; transition: border-color .25s, box-shadow .25s; }
+  #pat .v { font: 700 15px var(--mono); white-space: nowrap; color: var(--ink); } #pat .l { font: 11.5px var(--mono); color: var(--muted); margin-bottom: 4px; }
+  #pat.stop { border-color: var(--neon); box-shadow: 0 0 22px color-mix(in srgb, var(--neon) 45%, transparent); }
+  #stopflash { font: 700 34px var(--mono); color: var(--neon); letter-spacing: .12em; opacity: 0; margin-top: 8px; text-align: center; }
+  #stopflash.go { animation: flash 1.1s ease; }
+  @keyframes flash { 0% { opacity: 0; transform: scale(1.4); } 25% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font: 12px var(--mono); color: var(--muted); margin: 0 0 6px; align-items: center; }
+  .legend i { display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+
+  /* the bottom: caption and navigation */
+  #cap { position: fixed; z-index: 2; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(680px, calc(100vw - 32px));
+    text-align: center; font-size: 14.5px; line-height: 1.45; pointer-events: none; min-height: 21px; }
+  #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
+  #nav button, #onward { cursor: pointer; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); display: grid; place-items: center; padding: 0;
+    backdrop-filter: blur(4px); transition: box-shadow .2s, background .2s, color .2s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible, #onward:hover, #onward:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  #nav button:active:not(:disabled), #onward:active { background: var(--neon); color: var(--on-neon); }
+  #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; box-shadow: 0 0 22px color-mix(in srgb, var(--neon) 25%, transparent); }
+  #nav button[hidden], #onward[hidden] { display: none; }
+  #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
+  #onward { height: 44px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 22px; white-space: nowrap; font-size: 14px; color: var(--ink); text-decoration: none; }
+  #onward[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+  #dots { display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
+  #dots i.on { background: var(--neon); border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
+
+  /* card (parameters, "sparse") and tooltip */
+  #card { position: fixed; z-index: 6; left: 50%; top: 50%; width: min(380px, 88vw); padding: 18px 20px 16px; transform: translate(-50%, -46%);
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px; box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
+    backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+  #card.on { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; background: var(--gray); color: var(--on-neon); }
+  #card h2 { margin: 8px 0 10px; font: 700 17px/1.25 var(--mono); color: var(--neon); word-break: break-word; }
+  #card p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.5; }
+  #card .x { font: 12px var(--mono); color: var(--muted); }
+  #tip { position: fixed; z-index: 7; padding: 5px 9px; border-radius: 8px; border: 1px solid var(--panel-border); background: var(--panel); font: 12px var(--mono); pointer-events: none; opacity: 0; transition: opacity .15s; max-width: 260px; }
+  #tip.on { opacity: 1; }
+
+  @media (max-width: 760px) {
+    .hud { left: 16px; right: 16px; top: 14px; }
+    .scene { width: calc(100% - 32px); }
+    .two, .s5 { grid-template-columns: 1fr; }
+    #batches { grid-template-columns: 1fr; gap: 8px; }
+    .batch .pills { grid-template-columns: repeat(16, 1fr); }
+    #cap { font-size: 13px; bottom: 76px; }
+    h1 { font-size: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body data-block="8">
+
+<div class="hud" id="hud">
+  <a class="back" href="../index.html#how">← all blocks</a>
+  <div class="kicker">Block 8 of 12 · Training</div>
+  <h1 id="title"></h1>
+  <div id="params" aria-label="Parameters from the notebook"></div>
+</div>
+
+<main id="stage" aria-label="Training in five scenes">
+  <section class="scene" id="s1"></section>
+  <section class="scene" id="s2"></section>
+  <section class="scene" id="s3"></section>
+  <section class="scene" id="s4"></section>
+  <section class="scene" id="s5"></section>
+</main>
+
+<div id="cap" aria-live="polite"></div>
+<nav id="nav" aria-label="Scenes">
+  <button id="prev" type="button" aria-label="Previous scene">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next scene">→</button>
+  <a id="onward" aria-disabled="true" hidden>Next: Evaluation →</a>
+</nav>
+<div id="card" role="dialog" aria-live="polite"></div>
+<div id="tip"></div>
+
+<!-- Optional real training history. If data/history.js exists next to this page, it is drawn instead of the illustrative curves.
+     Format (one value per epoch, Keras `history.history`; accuracy arrays are optional):
+       window.EXS_HISTORY = { loss: [..], val_loss: [..], accuracy: [..], val_accuracy: [..] };
+     Without the file the page shows illustrative data and marks it "illustrative". -->
+<script src="data/history.js"></script>
+<script src="../_shared/theme.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------
+   Constants. Values from the notebook: EPOCHS, LEARNING_RATE, BATCH_SIZE (cell 1), compile / EarlyStopping / fit (cell 8).
+------------------------------------------------------------------ */
+const EPOCHS = 100, LEARNING_RATE = 0.005, BATCH_SIZE = 32, PATIENCE = 15;
+const CLASSES = ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
+const TRUE_CLASS = 1;                                         // "elly"
+const UNTRAINED = [0.14, 0.22, 0.18, 0.11, 0.20, 0.15];       // illustrative, sums to 1
+const BETA1 = 0.9, BETA2 = 0.999, EPS = 1e-7;                 // Keras Adam defaults
+const N_DEMO_CLIPS = 96;                                      // illustrative: 3 batches of BATCH_SIZE
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const html = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const rgb = k => THEME.rgb[k].split(',').map(Number);
+
+const PARAMS = {
+  optimizer: { k: 'optimizer', v: 'Adam', h: 'optimizer = Adam', p: ['Adam adapts the step for every weight separately, from the history of its own gradients.', 'Why: we do not have to tune a step size per layer.'] },
+  lr:        { k: 'learning_rate', v: String(LEARNING_RATE), h: 'learning_rate = LEARNING_RATE', p: ['How far a weight moves in one update. 0.005 is our starting value.', 'It still has to be checked on validation: too small is slow, too large jumps over the minimum.'] },
+  loss:      { k: 'loss', v: 'sparse_categorical_crossentropy', h: 'loss = sparse_categorical_crossentropy', p: ['How wrong the probabilities are: −log of the probability given to the right class.', '"Sparse" because the labels are integers 0–5, not one-hot vectors.'] },
+  patience:  { k: 'patience', v: String(PATIENCE), h: 'patience = 15', p: ['EarlyStopping waits 15 epochs without any improvement of val_loss, then stops.', 'Why: a few bad epochs can be noise, fifteen in a row mean the model started to overfit.'] },
+  restore:   { k: 'restore_best_weights', v: 'True', h: 'restore_best_weights = True', p: ['After stopping, the model goes back to the weights of the best epoch, not the last one.', 'Why: the last 15 epochs were worse on validation.'] },
+  batch:     { k: 'batch_size', v: String(BATCH_SIZE), h: 'batch_size = BATCH_SIZE', p: ['Number of clips used for one weight update.', 'Why 32: a common small value, it gives many updates per epoch with a steady direction.'] },
+  epochs:    { k: 'epochs', v: String(EPOCHS), h: 'epochs = EPOCHS', p: ['The upper limit of passes over the training set.', 'EarlyStopping usually stops training much earlier.'] },
+};
+const SCENES = [
+  { title: 'What the model sees', params: ['optimizer', 'loss'], cap: 'Untrained: the model guesses almost evenly.' },
+  { title: 'How wrong is it?', params: ['loss'], cap: 'The closer the right class gets to 1, the smaller the loss. Training pushes the loss down.' },
+  { title: 'One step', params: ['optimizer', 'lr'], cap: "Adam scales each weight's step by its own gradient history." },
+  { title: 'Batches and epochs', params: ['batch', 'epochs'], cap: 'One update per batch. One epoch = every clip seen once.' },
+  { title: 'Validation and EarlyStopping', params: ['patience', 'restore', 'epochs'], cap: 'Stop when validation stops improving, then keep the best weights.' },
+];
+
+/* ------------------------------------------------------------------
+   Card, tooltip, parameter pills, tween
+------------------------------------------------------------------ */
+const card = $('card'), tip = $('tip');
+let cardKey = null;
+function closeCard() { cardKey = null; card.classList.remove('on'); document.querySelectorAll('.ppill.on').forEach(b => b.classList.remove('on')); }
+function openCard(key, tag, head, paras) {
+  if (cardKey === key) { closeCard(); return; }
+  cardKey = key; card.innerHTML = '';
+  html('span', 'tag', card, tag); html('h2', '', card, head);
+  paras.forEach(t => html('p', '', card, t)); html('div', 'x', card, 'tap to close');
+  card.classList.add('on');
+  document.querySelectorAll('.ppill').forEach(b => b.classList.toggle('on', b.dataset.key === key));
+}
+card.addEventListener('click', closeCard);
+addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+let tipTimer = 0;
+function showTip(text, x, y, ms) {
+  tip.textContent = text; tip.classList.add('on');
+  const w = tip.offsetWidth; tip.style.left = clamp(x - w / 2, 8, innerWidth - w - 8) + 'px'; tip.style.top = Math.max(8, y - 40) + 'px';
+  clearTimeout(tipTimer); if (ms) tipTimer = setTimeout(() => tip.classList.remove('on'), ms);
+}
+const hideTip = () => tip.classList.remove('on');
+
+function renderParams(list) {
+  const box = $('params'); box.innerHTML = '';
+  html('span', 'src', box, 'from notebook cell 8');
+  list.forEach(id => {
+    const P = PARAMS[id], b = html('button', 'ppill', box); b.type = 'button'; b.dataset.key = id; b.title = 'from notebook cell 8';
+    html('span', '', b, P.k + ' = '); html('b', '', b, P.v);
+    b.addEventListener('click', e => { e.stopPropagation(); openCard(id, 'from notebook cell 8', P.h, P.p); });
+  });
+}
+
+/* fn(t) for t in 0..1 with easing; with reduced motion it is called once at 1. Returns a cancel function. */
+function tween(ms, fn, done) {
+  if (reduce) { fn(1); if (done) done(); return () => {}; }
+  let raf = 0, t0 = 0, stop = false;
+  const step = now => { if (stop) return; if (!t0) t0 = now; const t = clamp((now - t0) / ms, 0, 1); fn(1 - Math.pow(1 - t, 3)); if (t < 1) raf = requestAnimationFrame(step); else if (done) done(); };
+  raf = requestAnimationFrame(step);
+  return () => { stop = true; cancelAnimationFrame(raf); };
+}
+
+/* ------------------------------------------------------------------
+   Scene 1: forward pass
+------------------------------------------------------------------ */
+const S1 = { stop: null };
+function buildScene1() {
+  const host = $('s1'); host.innerHTML = ''; if (S1.stop) S1.stop();
+  const narrow = innerWidth < 760;
+  const W = narrow ? 390 : 1000, H = narrow ? 520 : 320;
+  const svg = el('svg', { class: 'fig', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'A clip becomes a 99 by 13 matrix, goes through a CNN, and gives six probabilities' }, host);
+  const defs = el('defs', {}, svg), mk = el('marker', { id: 'ah', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto' }, defs);
+  el('path', { d: 'M0 1L9 5L0 9z', fill: THEME.link }, mk);
+  const arrow = (x1, y1, x2, y2) => el('path', { d: `M${x1} ${y1}L${x2} ${y2}`, stroke: THEME.link, 'stroke-width': 1.4, fill: 'none', 'marker-end': 'url(#ah)' }, svg);
+
+  // the clip: a deterministic waveform
+  const wx = narrow ? 20 : 10, wy = narrow ? 56 : 120, ww = narrow ? 120 : 140, wh = 30;
+  let d = '';
+  for (let i = 0; i <= 80; i++) { const t = i / 80, env = Math.sin(Math.PI * t) ** 1.2, y = wy + Math.sin(t * 61) * Math.cos(t * 7) * wh * env; d += (i ? 'L' : 'M') + (wx + t * ww).toFixed(1) + ' ' + y.toFixed(1); }
+  el('path', { d, fill: 'none', stroke: THEME.gray, 'stroke-width': 1.4 }, svg);
+  el('text', { x: wx + ww / 2, y: wy + 52, 'text-anchor': 'middle', 'font-size': 11 }, svg, '1-second clip');
+
+  // the 99 × 13 matrix, gray → green
+  const mx = narrow ? 200 : 215, my = narrow ? 30 : 80, cw = narrow ? 1.5 : 1.5, ch = narrow ? 4 : 6;
+  const gc = rgb('gray'), lc = rgb('neon');
+  for (let r = 0; r < 13; r++) for (let c = 0; c < 99; c++) {
+    const v = clamp(0.5 + 0.5 * Math.sin(c * 0.13 + r * 0.8) * Math.cos(r * 0.35 + c * 0.03), 0, 1);
+    el('rect', { x: mx + c * cw, y: my + r * ch, width: cw + .2, height: ch + .2, fill: `rgb(${mix(gc, lc, v).map(Math.round)})`, opacity: .3 + .65 * v }, svg);
+  }
+  el('text', { x: mx + 99 * cw / 2, y: my + 13 * ch + 18, 'text-anchor': 'middle', 'font-size': 11 }, svg, '99 × 13 matrix');
+
+  // the CNN: Conv, Conv, Dense
+  if (narrow) {
+    ['Conv', 'Conv', 'Dense'].forEach((t, i) => {
+      const y = 150 + i * 40; el('rect', { x: 120, y, width: 150, height: 32, rx: 8, fill: THEME.a('link', .12), stroke: THEME.link, 'stroke-width': 1.3 }, svg);
+      el('text', { x: 195, y: y + 20, 'text-anchor': 'middle', 'font-size': 12, style: 'fill:var(--ink)' }, svg, t);
+    });
+    arrow(60, 100, 60, 150); arrow(270, 130, 205, 145); arrow(195, 272, 195, 292);
+  } else {
+    ['Conv', 'Conv', 'Dense'].forEach((t, i) => {
+      const x = 440 + i * 56, y = 80, tx = x + 25, ty = y + 55;
+      el('rect', { x, y, width: 50, height: 110, rx: 8, fill: THEME.a('link', .12), stroke: THEME.link, 'stroke-width': 1.3 }, svg);
+      el('text', { x: tx, y: ty, 'text-anchor': 'middle', 'font-size': 11, transform: `rotate(-90 ${tx} ${ty + 4})`, style: 'fill:var(--ink)' }, svg, t);
+    });
+    el('text', { x: 522, y: 212, 'text-anchor': 'middle', 'font-size': 11 }, svg, 'CNN');
+    arrow(160, 120, 205, 120); arrow(372, 120, 435, 120); arrow(612, 120, 660, 120);
+  }
+
+  // probability bars
+  const bars = [];
+  if (!narrow) {
+    const bx = 675, bw = 36, gap = 55, base = 250, maxH = 160;
+    UNTRAINED.forEach((p, i) => {
+      const x = bx + i * gap, rect = el('rect', { x, y: base, width: bw, height: 0, rx: 4, fill: i === TRUE_CLASS ? THEME.neon : THEME.link, class: 'bar', tabindex: 0, role: 'button', 'aria-label': CLASSES[i] }, svg);
+      const val = el('text', { x: x + bw / 2, y: base - 6, 'text-anchor': 'middle', 'font-size': 11, style: 'fill:var(--ink)' }, svg, '');
+      el('text', { x: x + bw / 2, y: base + 16, 'text-anchor': 'middle', 'font-size': 10.5, style: i === TRUE_CLASS ? 'fill:var(--neon)' : '' }, svg, CLASSES[i]);
+      bars.push({ rect, val, base, maxH });
+    });
+    el('line', { x1: 665, x2: 1000, y1: 250, y2: 250, stroke: THEME.dim }, svg);
+    el('text', { x: 830, y: 290, 'text-anchor': 'middle', 'font-size': 11 }, svg, 'probability of each class · right answer: ' + CLASSES[TRUE_CLASS]);
+  } else {
+    const bx = 100, bh = 20, gap = 32, y0 = 300, maxW = 240;
+    UNTRAINED.forEach((p, i) => {
+      const y = y0 + i * gap, rect = el('rect', { x: bx, y, width: 0, height: bh, rx: 4, fill: i === TRUE_CLASS ? THEME.neon : THEME.link, class: 'bar', tabindex: 0, role: 'button', 'aria-label': CLASSES[i] }, svg);
+      el('text', { x: bx - 8, y: y + 15, 'text-anchor': 'end', 'font-size': 11, style: i === TRUE_CLASS ? 'fill:var(--neon)' : '' }, svg, CLASSES[i]);
+      const val = el('text', { x: bx + 4, y: y + 15, 'font-size': 11, style: 'fill:var(--ink)' }, svg, '');
+      bars.push({ rect, val, horiz: true, bx, maxW });
+    });
+    el('text', { x: 195, y: 510, 'text-anchor': 'middle', 'font-size': 11 }, svg, 'right answer: ' + CLASSES[TRUE_CLASS]);
+  }
+  const setBars = t => bars.forEach((b, i) => {
+    const p = UNTRAINED[i] * t;
+    if (b.horiz) { const w = p / 0.3 * b.maxW; b.rect.setAttribute('width', w.toFixed(1)); b.val.setAttribute('x', (b.bx + w + 6).toFixed(1)); }
+    else { const h = p / 0.3 * b.maxH; b.rect.setAttribute('y', (b.base - h).toFixed(1)); b.rect.setAttribute('height', h.toFixed(1)); b.val.setAttribute('y', (b.base - h - 6).toFixed(1)); }
+    b.val.textContent = p.toFixed(2);
+  });
+  bars.forEach((b, i) => {
+    const show = () => { const r = b.rect.getBoundingClientRect(); showTip(`${CLASSES[i]}: ${UNTRAINED[i].toFixed(2)}${i === TRUE_CLASS ? ' (right answer)' : ''}`, r.left + r.width / 2, r.top, 2200); };
+    b.rect.addEventListener('click', e => { e.stopPropagation(); show(); });
+    b.rect.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); } });
+  });
+  setBars(0); S1.stop = tween(900, setBars);
+  const note = html('div', 'sub', host); note.style.marginTop = '6px'; note.append('probabilities: '); html('span', 'illus', note, 'illustrative'); note.append('  ·  tap a bar for its value');
+}
+
+/* ------------------------------------------------------------------
+   Scene 2: loss
+------------------------------------------------------------------ */
+const S2 = { p: 0.22 };
+function buildScene2() {
+  const host = $('s2'); host.innerHTML = '';
+  const f = html('div', 'big', host); f.style.margin = '6px 0 4px'; f.innerHTML = 'loss = −log( <em>p_true</em> )';
+  const sub = html('div', 'sub', host); sub.style.marginBottom = '10px';
+  const sp = html('button', 'word', sub, 'sparse'); sp.type = 'button'; sub.append('_categorical_crossentropy');
+  sp.addEventListener('click', e => { e.stopPropagation(); openCard('sparse', 'what it means', '"sparse"', ['Labels are integers 0–5, not one-hot vectors.', `Example: ${CLASSES[TRUE_CLASS]} is stored as ${TRUE_CLASS}, not as [0, 1, 0, 0, 0, 0].`]); });
+  const W = 640, H = 290, L = 46, R = 16, T = 16, B = 36, YM = 4.8;
+  const X = p => L + (p - 0.01) / 0.99 * (W - L - R), Y = v => T + (1 - v / YM) * (H - T - B);
+  const svg = el('svg', { class: 'fig', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Curve of minus log p' }, host); svg.style.maxHeight = '44vh';
+  [0, 1, 2, 3, 4].forEach(v => { el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: THEME.dim, 'stroke-width': .5, opacity: .6 }, svg); el('text', { x: L - 8, y: Y(v) + 4, 'text-anchor': 'end', 'font-size': 11 }, svg, v); });
+  [0.01, .25, .5, .75, 1].forEach(p => el('text', { x: X(p), y: H - 18, 'text-anchor': 'middle', 'font-size': 11 }, svg, p === 0.01 ? '0' : p));
+  el('text', { x: (L + W - R) / 2, y: H - 4, 'text-anchor': 'middle', 'font-size': 11 }, svg, 'p_true (probability of the right class)');
+  el('text', { x: 14, y: 14, 'font-size': 11 }, svg, 'loss');
+  let d = ''; for (let i = 1; i <= 100; i++) d += (i > 1 ? 'L' : 'M') + X(i / 100).toFixed(1) + ' ' + Y(-Math.log(i / 100)).toFixed(1);
+  el('path', { d, fill: 'none', stroke: THEME.link, 'stroke-width': 2.2 }, svg);
+  const vline = el('line', { stroke: THEME.neon, 'stroke-dasharray': '3 3', 'stroke-width': 1 }, svg), dot = el('circle', { r: 7, fill: THEME.neon }, svg);
+  const row = html('div', 'row', host); row.style.marginTop = '8px';
+  const lab = html('span', 'sub', row), slider = html('input', '', row), num = html('span', '', row);
+  slider.type = 'range'; slider.id = 'slider'; slider.min = 1; slider.max = 100; slider.step = 1; slider.value = Math.round(S2.p * 100); slider.setAttribute('aria-label', 'p_true'); num.id = 'lossnum';
+  function sync() {
+    const p = S2.p, v = -Math.log(p); lab.textContent = 'p_true = ' + p.toFixed(2); num.textContent = 'loss = ' + v.toFixed(2);
+    dot.setAttribute('cx', X(p)); dot.setAttribute('cy', Y(v)); vline.setAttribute('x1', X(p)); vline.setAttribute('x2', X(p)); vline.setAttribute('y1', Y(v)); vline.setAttribute('y2', H - B);
+  }
+  // three marks on the curve
+  [[0.22, ' (untrained)', 'start', 12], [0.90, '', 'end', -10], [0.99, '', 'end', -10]].forEach(([p, suffix, anchor, dx], i) => {
+    const g = el('g', { class: 'mark', tabindex: 0, role: 'button', 'aria-label': 'p = ' + p }, svg), cx = X(p), cy = Y(-Math.log(p));
+    el('circle', { cx, cy, r: 6, fill: THEME.bg, stroke: THEME.gray, 'stroke-width': 1.6 }, g);
+    el('text', { x: cx + dx, y: cy - 10 - (i === 2 ? 14 : 0), 'text-anchor': anchor, 'font-size': 11, style: 'fill:var(--gray)' }, g, `p=${p.toFixed(2)} → ${(-Math.log(p)).toFixed(2)}${suffix}`);
+    const pick = () => { S2.p = p; slider.value = Math.round(p * 100); sync(); };
+    g.addEventListener('click', e => { e.stopPropagation(); pick(); }); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  svg.appendChild(vline); svg.appendChild(dot);
+  slider.addEventListener('input', () => { S2.p = slider.value / 100; sync(); }); sync();
+}
+
+/* ------------------------------------------------------------------
+   Scene 3: weight update with Adam
+------------------------------------------------------------------ */
+// toy loss (w − 3)²; the learning rate is multiplied by SCALE to toy units, so that 12 steps fill the picture
+const WSTAR = 3, W0 = 0, SCALE = 60;
+function adamPath(lr, n) {
+  let m = 0, v = 0, w = W0; const out = [w];
+  for (let t = 1; t <= n; t++) {
+    const g = 2 * (w - WSTAR); m = BETA1 * m + (1 - BETA1) * g; v = BETA2 * v + (1 - BETA2) * g * g;
+    w -= lr * SCALE * (m / (1 - BETA1 ** t)) / (Math.sqrt(v / (1 - BETA2 ** t)) + EPS); out.push(w);
+  }
+  return out;
+}
+const FORMULAS = [
+  ['g_t = ∇L(θ)', 'gradient: which way is uphill'],
+  ['m_t = β1·m_{t−1} + (1−β1)·g_t', 'moving average of gradient (direction)'],
+  ['v_t = β2·v_{t−1} + (1−β2)·g_t²', 'moving average of squared gradient (scale)'],
+  ['m̂ = m_t/(1−β1^t),  v̂ = v_t/(1−β2^t)', 'bias correction for the first steps'],
+  ['θ_t = θ_{t−1} − lr · m̂ / (√v̂ + ε)', 'the update'],
+];
+const S3 = { lr: LEARNING_RATE, stop: null, demoStop: null, run: 0 };
+function buildScene3() {
+  const host = $('s3'); host.innerHTML = ''; if (S3.stop) S3.stop(); if (S3.demoStop) S3.demoStop();
+  const two = html('div', 'two', host), left = html('div', '', two), right = html('div', '', two);
+  // left: toy curve and the ball
+  const W = 520, H = 240, L = 20, R = 16, T = 14, B = 30, X = w => L + (w + 0.5) / 7 * (W - L - R), Y = v => T + (1 - v / 11) * (H - T - B);
+  const toyY = w => Y(Math.min(11, (w - WSTAR) ** 2)) - 8;
+  const svg = el('svg', { class: 'fig', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Toy loss curve with a ball' }, left); svg.style.maxHeight = '32vh';
+  let d = ''; for (let i = 0; i <= 70; i++) { const w = -0.5 + i * 0.1; d += (i ? 'L' : 'M') + X(w).toFixed(1) + ' ' + Y(Math.min(11, (w - WSTAR) ** 2)).toFixed(1); }
+  el('path', { d, fill: 'none', stroke: THEME.link, 'stroke-width': 2.2 }, svg);
+  el('line', { x1: X(WSTAR), x2: X(WSTAR), y1: Y(0), y2: H - B + 6, stroke: THEME.neon, 'stroke-dasharray': '3 3' }, svg);
+  el('text', { x: X(WSTAR), y: H - 10, 'text-anchor': 'middle', 'font-size': 11, style: 'fill:var(--neon)' }, svg, 'minimum');
+  el('text', { x: W - R, y: H - 10, 'text-anchor': 'end', 'font-size': 11 }, svg, 'weight w →');
+  el('text', { x: L, y: 12, 'font-size': 11 }, svg, 'loss(w)');
+  const trail = el('path', { fill: 'none', stroke: THEME.neon, 'stroke-width': 1, opacity: .5 }, svg), ball = el('circle', { r: 8, fill: THEME.neon }, svg);
+  const stepTxt = el('text', { x: W - R, y: 28, 'text-anchor': 'end', 'font-size': 12, style: 'fill:var(--ink)' }, svg, '');
+  const pos = w => { ball.setAttribute('cx', X(w).toFixed(1)); ball.setAttribute('cy', toyY(w).toFixed(1)); };
+  const trailOf = (path, n) => path.slice(0, n + 1).map((w, i) => (i ? 'L' : 'M') + X(w).toFixed(1) + ' ' + toyY(w).toFixed(1)).join('');
+  const lrs = html('div', 'lrs', left);
+  [0.001, 0.005, 0.05].forEach(v => {
+    const b = html('button', 'btn', lrs, 'lr ' + v); b.type = 'button'; b.setAttribute('aria-pressed', v === S3.lr ? 'true' : 'false');
+    if (v === LEARNING_RATE) html('small', '', b, 'ours');
+    b.addEventListener('click', e => { e.stopPropagation(); S3.lr = v; lrs.querySelectorAll('.btn').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); runBall(); });
+  });
+  const hl = html('div', 'hl', left, 'tap an lr: the ball takes 12 steps · toy curve '); html('span', 'illus', hl, 'illustrative');
+  const msg = html('div', 'hl', left); msg.style.color = 'var(--ink)';
+
+  // right: Adam formulas, highlighted in turn
+  const fl = html('div', 'fl', right), rows = [];
+  FORMULAS.forEach(([f, hint]) => {
+    const r = html('div', 'f', fl); r.tabIndex = 0; r.title = hint; html('code', '', r, f); html('i', '', r, hint); rows.push(r);
+    r.addEventListener('click', e => { e.stopPropagation(); const b = r.getBoundingClientRect(); showTip(hint, b.left + b.width / 2, b.top, 2600); });
+  });
+  const consts = html('div', 'consts', right);
+  const showConsts = () => {
+    consts.innerHTML = ''; consts.append('β1 = '); html('b', '', consts, '0.9'); consts.append(', β2 = '); html('b', '', consts, '0.999'); consts.append(', ε = '); html('b', '', consts, '1e-7'); consts.append(' (Keras defaults)');
+    consts.append(document.createElement('br')); consts.append('lr = '); html('b', '', consts, String(S3.lr)); consts.append(S3.lr === LEARNING_RATE ? ' = LEARNING_RATE' : ' (ours: LEARNING_RATE = ' + LEARNING_RATE + ')');
+  };
+  const lightRow = i => rows.forEach((r, k) => r.classList.toggle('hot', k === i));
+  function verdict(path) {
+    const w = path[12]; msg.textContent = Math.max(...path) > WSTAR + 0.5 ? 'Too big: it flies past the minimum and bounces.' : Math.abs(w - WSTAR) < 0.3 ? 'It arrives at the minimum.' : 'Too small: after 12 steps it is still far away.';
+  }
+  function runBall() {
+    showConsts(); if (S3.stop) S3.stop(); const run = ++S3.run, path = adamPath(S3.lr, 12);
+    msg.textContent = ''; lightRow(-1);
+    if (reduce) { pos(path[12]); trail.setAttribute('d', trailOf(path, 12)); stepTxt.textContent = 'step 12 / 12'; verdict(path); return; }
+    pos(W0); trail.setAttribute('d', ''); stepTxt.textContent = 'step 0 / 12';
+    const STEP_MS = 650; let t0 = 0, raf = 0, stopped = false;
+    const frame = now => {
+      if (stopped || run !== S3.run) return; if (!t0) t0 = now;
+      const e = (now - t0) / STEP_MS, i = Math.min(12, Math.floor(e)), f = clamp(e - i, 0, 1);
+      if (i >= 12) { pos(path[12]); trail.setAttribute('d', trailOf(path, 12)); stepTxt.textContent = 'step 12 / 12'; lightRow(-1); verdict(path); return; }
+      pos(path[i] + (path[i + 1] - path[i]) * (1 - Math.pow(1 - f, 2))); trail.setAttribute('d', trailOf(path, i));
+      stepTxt.textContent = `step ${i + 1} / 12`; lightRow(Math.min(4, Math.floor(f * 5)));
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame); S3.stop = () => { stopped = true; cancelAnimationFrame(raf); lightRow(-1); };
+  }
+  svg.addEventListener('click', runBall);
+
+  // mini-demo: per-weight steps (SGD or Adam), a picture of the formula, not a result on our model
+  const demo = html('div', 'demo', right), h3 = html('h3', '', demo, 'Why per-weight steps '); html('span', 'illus', h3, 'illustrative');
+  const sw = html('div', 'lrs', demo), D = { mode: 'SGD', stop: null };
+  ['SGD', 'Adam'].forEach(m => {
+    const b = html('button', 'btn', sw, m); b.type = 'button'; b.setAttribute('aria-pressed', m === D.mode ? 'true' : 'false');
+    b.addEventListener('click', e => { e.stopPropagation(); D.mode = m; sw.querySelectorAll('.btn').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); demoRun(); });
+  });
+  const dsvg = el('svg', { class: 'fig', viewBox: '0 0 360 96', role: 'img', 'aria-label': 'Two weights, one with a large gradient and one with a small gradient' }, demo);
+  const tracks = [{ name: 'weight A: big gradient', y: 30, k: 8 }, { name: 'weight B: small gradient', y: 76, k: 0.2 }];
+  tracks.forEach(t => {
+    el('line', { x1: 10, x2: 350, y1: t.y, y2: t.y, stroke: THEME.dim }, dsvg); el('text', { x: 10, y: t.y - 14, 'font-size': 10.5 }, dsvg, t.name);
+    el('line', { x1: 330, x2: 330, y1: t.y - 8, y2: t.y + 8, stroke: THEME.neon }, dsvg);
+    t.ball = el('circle', { cx: 10, cy: t.y, r: 6, fill: THEME.gray }, dsvg); t.txt = el('text', { x: 350, y: t.y - 14, 'text-anchor': 'end', 'font-size': 10.5, style: 'fill:var(--ink)' }, dsvg, '');
+  });
+  const dnote = html('div', 'hl', demo);
+  function demoRun() {
+    if (D.stop) D.stop();
+    // 8 steps on loss k·(w−3)²/2 for each weight: plain SGD (lr 0.05) or Adam (lr 0.3, same formulas as above)
+    const hist = tracks.map(t => {
+      let w = 0, m = 0, v = 0; const o = [0], sz = [];
+      for (let s = 1; s <= 8; s++) {
+        const g = t.k * (w - 3); let dw;
+        if (D.mode === 'SGD') dw = 0.05 * g;
+        else { m = BETA1 * m + (1 - BETA1) * g; v = BETA2 * v + (1 - BETA2) * g * g; dw = 0.3 * (m / (1 - BETA1 ** s)) / (Math.sqrt(v / (1 - BETA2 ** s)) + EPS); }
+        w -= dw; o.push(w); sz.push(Math.abs(dw));
+      }
+      return { o, sz };
+    });
+    const draw = f => tracks.forEach((t, i) => {
+      const h = hist[i], k = Math.min(7, Math.floor(f * 8)), fr = f * 8 - k, w = f >= 1 ? h.o[8] : h.o[k] + (h.o[k + 1] - h.o[k]) * fr;
+      t.ball.setAttribute('cx', (10 + clamp(w, 0, 3.4) / 3 * 320).toFixed(1)); t.txt.textContent = 'step size: ' + h.sz[k].toFixed(2);
+    });
+    dnote.textContent = D.mode === 'SGD' ? 'SGD: step = lr · gradient, so A races and B crawls.' : 'Adam: both weights move about the same distance per step.';
+    D.stop = tween(2200, draw);
+  }
+  S3.demoStop = () => { if (D.stop) D.stop(); };
+  demoRun(); runBall();
+}
+
+/* ------------------------------------------------------------------
+   Scene 4: batches and epochs
+------------------------------------------------------------------ */
+const S4 = { t: 0, advance: null };   // t: 0 = not started; per epoch: updates 1..n, then "done"
+function buildScene4() {
+  const host = $('s4'); host.innerHTML = '';
+  const nb = Math.ceil(N_DEMO_CLIPS / BATCH_SIZE), cycle = nb + 1;
+  const st = html('div', 'sub', host, `batch_size = ${BATCH_SIZE}: ${N_DEMO_CLIPS} training clips make ${nb} batches `); html('span', 'illus', st, 'illustrative: 96 clips');
+  const grid = html('div', '', host); grid.id = 'batches';
+  const boxes = [];
+  for (let b = 0; b < nb; b++) {
+    const bx = html('div', 'batch', grid), h = html('h4', '', bx); html('span', '', h, 'batch ' + (b + 1)); html('span', '', h, BATCH_SIZE + ' clips');
+    const pl = html('div', 'pills', bx); for (let i = 0; i < BATCH_SIZE; i++) html('i', 'cp', pl);
+    bx.addEventListener('click', e => { e.stopPropagation(); advance(); }); boxes.push(bx);
+  }
+  const upd = html('div', '', host); upd.id = 'upd';
+  const row = html('div', 'row', host), btn = html('button', 'btn', row); btn.type = 'button'; btn.addEventListener('click', e => { e.stopPropagation(); advance(); });
+  html('div', 'formula', host, `updates per epoch = ⌈N_train / BATCH_SIZE⌉ = ⌈${N_DEMO_CLIPS} / ${BATCH_SIZE}⌉ = ${nb}`);
+  function sync() {
+    const t = S4.t, epoch = Math.floor((t - 1) / cycle) + 1, k = t === 0 ? 0 : ((t - 1) % cycle) + 1;
+    boxes.forEach((b, i) => { b.classList.toggle('hot', t > 0 && k <= nb && i === k - 1); b.classList.toggle('seen', t > 0 && (k > nb || i < k - 1)); });
+    upd.textContent = t === 0 ? 'tap a batch to start' : k <= nb ? `epoch ${epoch} · update #${k}` : `epoch ${epoch} done ✓`;
+    btn.textContent = t === 0 ? 'Start →' : k === nb ? 'Finish epoch →' : k > nb ? `Start epoch ${epoch + 1} →` : 'Next update →';
+  }
+  function advance() { S4.t++; sync(); }
+  S4.advance = advance; sync();
+}
+
+/* ------------------------------------------------------------------
+   Scene 5: validation and EarlyStopping
+------------------------------------------------------------------ */
+function makeHistory() {
+  const H = window.EXS_HISTORY;
+  if (H && Array.isArray(H.loss) && Array.isArray(H.val_loss) && H.loss.length && H.val_loss.length) return { loss: H.loss, val: H.val_loss, vacc: H.val_accuracy, real: true };
+  // illustrative: train falls to the end; val falls to epoch 25, then rises with noise until patience runs out
+  let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const loss = [], val = []; let best = 1e9, bestE = 0;
+  for (let e = 1; e <= 80; e++) {
+    loss.push(1.7 * Math.exp(-e / 9) + 0.04 + (rnd() - .5) * 0.02);
+    let v = e < 25 ? 0.44 + 1.2 * Math.exp(-e / 7) + (rnd() - .5) * 0.03 : e === 25 ? 0.41 : 0.43 + 0.014 * (e - 25) + rnd() * 0.05;
+    val.push(v); if (v < best) { best = v; bestE = e; } if (e - bestE >= PATIENCE) break;
+  }
+  return { loss, val, real: false };
+}
+const S5 = { stop: null, api: null };
+function buildScene5() {
+  const host = $('s5'); host.innerHTML = ''; if (S5.stop) S5.stop();
+  const Hd = makeHistory(), N = Hd.loss.length;
+  // EarlyStopping rule: the best epoch so far; stop when PATIENCE epochs have passed without a new best
+  let best = 1e9, bestE = 0, stopE = N; const pat = [], bests = [];
+  for (let i = 0; i < N; i++) {
+    if (Hd.val[i] < best) { best = Hd.val[i]; bestE = i + 1; }
+    pat.push(i + 1 - bestE); bests.push(bestE); if (pat[i] >= PATIENCE && stopE === N) stopE = i + 1;
+  }
+  const finalBest = bests[stopE - 1], XM = Math.max(50, Math.ceil(stopE * 1.15));
+  const ymax = Math.max(...Hd.loss.slice(0, stopE), ...Hd.val.slice(0, stopE)) * 1.05;
+  const wrap = html('div', 's5', host), main = html('div', '', wrap), side = html('div', '', wrap);
+  const lg = html('div', 'legend', main);
+  [['var(--link)', 'train loss'], ['var(--neon)', 'val loss']].forEach(([c, t]) => { const s = html('span', '', lg); html('i', '', s).style.background = c; s.append(t); });
+  if (!Hd.real) html('span', 'illus', lg, 'illustrative');
+  const W = 640, H = 350, L = 44, R = 14, T = 10, B = 84;
+  const X = e => L + (e - 1) / (XM - 1) * (W - L - R), Y = v => T + (1 - v / ymax) * (H - T - B);
+  const svg = el('svg', { class: 'fig', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Training and validation loss per epoch' }, main); svg.style.maxHeight = '48vh';
+  for (let i = 0; i <= 4; i++) { const v = ymax * i / 4; el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: THEME.dim, 'stroke-width': .5, opacity: .6 }, svg); el('text', { x: L - 6, y: Y(v) + 4, 'text-anchor': 'end', 'font-size': 10.5 }, svg, v.toFixed(2)); }
+  for (let e = 10; e <= XM; e += 10) el('text', { x: X(e), y: H - B + 16, 'text-anchor': 'middle', 'font-size': 10.5 }, svg, e);
+  el('text', { x: (L + W - R) / 2, y: H - B + 30, 'text-anchor': 'middle', 'font-size': 10.5 }, svg, 'epoch (at most EPOCHS = ' + EPOCHS + ')');
+  const pTrain = el('path', { fill: 'none', stroke: THEME.link, 'stroke-width': 1.6, 'stroke-dasharray': '5 3' }, svg), pVal = el('path', { fill: 'none', stroke: THEME.neon, 'stroke-width': 2.8 }, svg);
+  const bestDot = el('circle', { r: 6, fill: THEME.bg, stroke: THEME.neon, 'stroke-width': 2, opacity: 0 }, svg), bestTxt = el('text', { 'font-size': 11, 'text-anchor': 'middle', style: 'fill:var(--neon)', opacity: 0 }, svg, '');
+  // the weights track: from which epoch the current weights come
+  const ty = H - 30; el('line', { x1: L, x2: W - R, y1: ty, y2: ty, stroke: THEME.dim }, svg); el('text', { x: L - 6, y: ty + 4, 'text-anchor': 'end', 'font-size': 10 }, svg, 'weights');
+  const marker = el('path', { d: 'M0 -7L5 0L0 7L-5 0z', fill: THEME.gray, transform: 'translate(-100 0)' }, svg), mtxt = el('text', { y: ty + 20, 'text-anchor': 'middle', 'font-size': 10.5, style: 'fill:var(--ink)' }, svg, '');
+  const patBox = html('div', '', side); patBox.id = 'pat'; html('div', 'l', patBox, 'EarlyStopping'); const patV = html('div', 'v', patBox);
+  const flash = html('div', '', side, 'STOP'); flash.id = 'stopflash';
+  const info = html('div', 'sub', side); info.style.cssText = 'margin-top:8px;text-align:left;min-height:3em';
+  const btn = html('button', 'btn', side); btn.type = 'button'; btn.style.cssText = 'margin-top:10px;width:100%';
+  const pathOf = (arr, n) => arr.slice(0, n).map((v, i) => (i ? 'L' : 'M') + X(i + 1).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+  let n = 0, timer = 0, state = 'idle', restoreStop = null;   // state: idle, run, pause, done
+  const setWeights = e => { marker.setAttribute('transform', `translate(${X(e).toFixed(1)} ${ty})`); mtxt.setAttribute('x', X(e).toFixed(1)); mtxt.textContent = 'epoch ' + Math.round(e); };
+  function draw() {
+    pTrain.setAttribute('d', pathOf(Hd.loss, n)); pVal.setAttribute('d', pathOf(Hd.val, n));
+    const be = n ? bests[n - 1] : 0;
+    if (be) { const bx = X(be), by = Y(Hd.val[be - 1]); bestDot.setAttribute('cx', bx); bestDot.setAttribute('cy', by); bestDot.setAttribute('opacity', 1); bestTxt.setAttribute('x', bx); bestTxt.setAttribute('y', by + 22); bestTxt.setAttribute('opacity', 1); bestTxt.textContent = 'best epoch ' + be; }
+    else { bestDot.setAttribute('opacity', 0); bestTxt.setAttribute('opacity', 0); }
+    patV.textContent = `patience ${n ? pat[n - 1] : 0} / ${PATIENCE}`; if (n && state !== 'done') setWeights(n);
+    if (state !== 'done') info.textContent = n ? `epoch ${n} · val_loss ${Hd.val[n - 1].toFixed(2)}` + (Hd.real && Hd.vacc ? ` · val_accuracy ${(Hd.vacc[n - 1] * 100).toFixed(0)}%` : '') : 'press Train, or tap the chart';
+    btn.textContent = state === 'run' ? 'Pause' : state === 'pause' ? 'Resume' : state === 'done' ? 'Replay' : 'Train';
+  }
+  function reset() { clearTimeout(timer); if (restoreStop) restoreStop(); n = 0; state = 'idle'; patBox.classList.remove('stop'); flash.classList.remove('go'); marker.setAttribute('transform', 'translate(-100 0)'); mtxt.textContent = ''; draw(); }
+  function finishRun() {
+    // restore_best_weights=True: the marker jumps back to the best epoch
+    state = 'done'; draw(); info.textContent = 'restore_best_weights=True';
+    restoreStop = tween(700, t => { setWeights(stopE + (finalBest - stopE) * t); }, () => { mtxt.textContent = 'restored: epoch ' + finalBest; info.textContent = `weights restored from epoch ${finalBest}`; });
+  }
+  function tick() {
+    if (state !== 'run') return;
+    n++; draw();
+    if (n >= stopE) { patBox.classList.add('stop'); flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); timer = setTimeout(finishRun, reduce ? 0 : 900); return; }
+    timer = setTimeout(tick, reduce ? 0 : 110);
+  }
+  function toggle() {
+    if (state === 'done') reset();
+    if (state === 'idle') { state = 'run'; draw(); tick(); }
+    else if (state === 'run') { state = 'pause'; clearTimeout(timer); draw(); }
+    else if (state === 'pause') { state = 'run'; draw(); tick(); }
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); toggle(); }); svg.addEventListener('click', toggle);
+  S5.stop = () => { clearTimeout(timer); if (restoreStop) restoreStop(); };
+  S5.api = { epochs: () => n, state: () => state, stopEpoch: stopE, best: finalBest, toggle };
+  reset();
+}
+
+/* ------------------------------------------------------------------
+   Scenes: switching, keys, swipe
+------------------------------------------------------------------ */
+const BUILD = [buildScene1, buildScene2, buildScene3, buildScene4, buildScene5];
+const NSCENES = BUILD.length, dots = Array.from($('dots').children), prevBtn = $('prev'), nextBtn = $('next'), onward = $('onward'), stage = $('stage');
+let scene = 0;
+const fitTop = () => stage.style.setProperty('--top', ($('hud').offsetHeight + 28) + 'px');
+function setScene(n) {
+  n = clamp(n, 1, NSCENES);
+  if (S1.stop) S1.stop(); if (S3.stop) S3.stop(); if (S3.demoStop) S3.demoStop(); if (S5.stop) S5.stop();
+  closeCard(); hideTip(); scene = n;
+  document.querySelectorAll('.scene').forEach((s, i) => s.classList.toggle('on', i === n - 1));
+  dots.forEach((d, i) => d.classList.toggle('on', i === n - 1));
+  prevBtn.disabled = n === 1; nextBtn.hidden = n === NSCENES; onward.hidden = n !== NSCENES;
+  $('title').textContent = SCENES[n - 1].title; $('cap').textContent = SCENES[n - 1].cap; renderParams(SCENES[n - 1].params);
+  BUILD[n - 1](); stage.scrollTop = 0; fitTop();
+}
+prevBtn.addEventListener('click', () => setScene(scene - 1)); nextBtn.addEventListener('click', () => setScene(scene + 1));
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') setScene(scene + 1); else if (e.key === 'ArrowLeft') setScene(scene - 1); });
+document.addEventListener('click', e => { if (cardKey && !card.contains(e.target) && !e.target.closest('.ppill')) closeCard(); });
+let lastNarrow = innerWidth < 760, rz = 0;
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { fitTop(); const nw = innerWidth < 760; if (nw !== lastNarrow) { lastNarrow = nw; if (scene === 1) buildScene1(); } }, 120); });
+
+// one-finger swipe changes the scene; the click that follows a swipe is ignored
+let down = null, swiped = false;
+stage.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, type: e.pointerType }; swiped = false; });
+stage.addEventListener('pointercancel', () => { down = null; });
+stage.addEventListener('pointerup', e => {
+  if (!down) return; const d = down; down = null; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+  if (d.type !== 'mouse' && Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { swiped = true; setScene(scene + (dx < 0 ? 1 : -1)); }
+});
+stage.addEventListener('click', e => { if (swiped) { e.stopPropagation(); e.preventDefault(); swiped = false; } }, true);
+
+setScene(1);
+document.fonts && document.fonts.ready.then(fitTop);
+
+window.__exs = { scene: () => scene, go: setScene, s4: () => S4.t, advance4: () => S4.advance && S4.advance(), s5: () => S5.api, adam: adamPath };
+})();
+</script>
+<script src="../_shared/blocks.js"></script>
+<script src="../_shared/swipe.js" defer></script>
+</body>
+</html>
