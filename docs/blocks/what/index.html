@@ -90,7 +90,7 @@
   #stage { position: fixed; left: 0; right: 0; top: var(--top, 170px); bottom: var(--bot, 130px); touch-action: pan-y; }
   .wrap { position: relative; height: 100%; width: min(1100px, calc(100% - 2 * var(--pad, 32px))); margin: 0 auto; }
   .layer { position: absolute; inset: 0; transition: opacity .3s ease; }
-  #modesLayer { opacity: 0; pointer-events: none; }
+  #modesLayer { opacity: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: safe center; }
   [data-scene="4"] #wordsLayer { opacity: 0; pointer-events: none; }
   [data-scene="4"] #modesLayer { opacity: 1; pointer-events: auto; transition-delay: .25s; }
 
@@ -184,6 +184,11 @@
   .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--dim); box-sizing: border-box; }
   .mode .cnt { font: 11.5px var(--mono); color: var(--muted); }
   .dist { }
+
+  /* the protocol cards pop up one after another, in the middle of the screen */
+  [data-scene="4"] .mode { animation: pop .7s ease both; animation-delay: calc(var(--mi, 0) * .09s + .25s); }
+  /* no transform: the clip pills measure the dots of these cards to land on them */
+  @keyframes pop { 0% { opacity: 0; box-shadow: 0 0 0 color-mix(in srgb, var(--neon) 0%, transparent); } 60% { opacity: 1; box-shadow: 0 0 26px color-mix(in srgb, var(--neon) 45%, transparent); } 100% { opacity: 1; } }
 
   @media (max-width: 699px) {
     #words { grid-template-columns: repeat(2, 1fr); column-gap: 10px; row-gap: 8px; }
@@ -375,7 +380,7 @@ MODES.forEach((m, i) => {
   b.addEventListener('click', () => { if (scene !== 4) return; const on = !b.classList.contains('on'); modeCards.forEach(c => c.classList.remove('on')); b.classList.toggle('on', on); });
   modesEl.appendChild(b);
 });
-const modeCards = [...modesEl.children];
+const modeCards = [...modesEl.children]; modeCards.forEach((c, i) => c.style.setProperty('--mi', i));
 
 /* ------------------------------------------------------------------
    Layout: sizes into CSS variables, then the home and landing positions of the pills

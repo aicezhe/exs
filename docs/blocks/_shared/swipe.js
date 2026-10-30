@@ -70,6 +70,8 @@
     setTimeout(() => { location.href = url(target); }, FADE_MS);
   }
 
+  window.EXS_GO = go;   // used by tapstep.js: a tap or arrow key past the last / first step changes the block
+
   // trackpad: a horizontal-dominant wheel gesture, summed until it is long enough
   let sum = 0, sumT = 0;
   addEventListener('wheel', e => {
