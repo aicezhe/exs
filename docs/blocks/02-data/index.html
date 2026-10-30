@@ -106,12 +106,12 @@
 ------------------------------------------------------------------ */
 const CLASSES = ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
 const FILES = [
-  'telegram.anna.01.wav', 'telegram.anna.02.wav', 'telegram.franc.01.wav', 'telegram.vova.01.wav',
-  'elly.anna.01.wav', 'elly.franc.01.wav', 'elly.olga.01.wav', 'elly.vova.01.wav',
-  'slack.anna.01.wav', 'slack.olga.01.wav', 'slack.vova.01.wav',
-  'focus.franc.01.wav', 'focus.olga.01.wav', 'focus.anna.02.wav',
-  'noise.anna.01.wav', 'noise.franc.01.wav', 'noise.vova.01.wav',
-  'unknown.olga.01.wav', 'unknown.anna.01.wav', 'unknown.franc.02.wav',
+  'telegram.anna.01.wav', 'telegram.anna.02.wav', 'telegram.franc.01.wav', 'telegram.olga.01.wav', 'telegram.vova.01.wav', 'telegram.vova.02.wav',
+  'elly.anna.01.wav', 'elly.franc.01.wav', 'elly.franc.02.wav', 'elly.olga.01.wav', 'elly.vova.01.wav',
+  'slack.anna.01.wav', 'slack.franc.01.wav', 'slack.olga.01.wav', 'slack.olga.02.wav', 'slack.vova.01.wav',
+  'focus.anna.01.wav', 'focus.anna.02.wav', 'focus.franc.01.wav', 'focus.olga.01.wav', 'focus.vova.01.wav',
+  'noise.anna.01.wav', 'noise.franc.01.wav', 'noise.olga.01.wav', 'noise.vova.01.wav', 'noise.vova.02.wav',
+  'unknown.anna.01.wav', 'unknown.franc.01.wav', 'unknown.franc.02.wav', 'unknown.olga.01.wav', 'unknown.vova.01.wav',
   'silence.anna.01.wav', 'test.franc.01.wav',   // labels that are not in CLASSES
   'recording.wav',                              // a name with fewer than 3 parts
 ];
@@ -460,6 +460,7 @@ function drawTable() {
         drawLabel(String(n), x + cw / 2, y + rh / 2, xt * (n === 0 ? .45 : 1), isAll ? THEME.ink : THEME.ink, fs, 'center');
       }
     });
+    drawLabel('demo files, real counts come from the notebook', x0 + L.pc, y0 + L.xth + 14, xt, THEME.muted, Math.max(10, fs * .72));   // small, under the table box
   }
 
   // clips counter

@@ -735,7 +735,11 @@ function sceneSamples(p, T) {
   const ty = Y1 + FS * 2;
   for (let ms = 0; ms <= 10; ms += 2) { const X = X0 + (X1 - X0) * ms / 10 * (K / (K - 1)); if (X <= X1 + 1) text(ms + " " + L.ms, X, ty, { a: "center", mono: true }); }
   text(L.cont, X1, Y0 - 12, { a: "right" }); text("● " + L.samp, X1 - 4, Y0 - 12 - FS * 1.5, { a: "right", c: C.sig, w: 600 });
-  if (!playing && sel === null) text(L.pick, (X0 + X1) / 2, Y1 + FS * 5.4, { a: "center", c: C.muted }); // the hint, only while paused
+  // the loupe (paused, nothing selected): the samples around the pointer, enlarged
+  const dt = Math.min(.1, wall - LP.lw); LP.lw = wall;
+  LP.a = playing || sel !== null ? 0 : clamp(LP.a + (LP.over ? 1 : -1) * dt / .2, 0, 1);
+  if (LP.a > 0) loupe(L, X0, X1, Y0, Y1, { off: start, n: K, span: 12 });
+  else if (!playing && sel === null) text(L.pick, (X0 + X1) / 2, Y1 + FS * 5.4, { a: "center", c: C.muted }); // the hint, only while paused
 }
 // Scene 3's sample view (paused only): sel = the selected sample in the 10 ms window (from 0), SAMP = the graph's geometry.
 let sel = null, SAMP = null;
@@ -811,9 +815,11 @@ function sceneSecond(p, T) {
 // Scene 4's loupe: LP = pointer position (scene coordinates), whether it is over the graph, the fade, the window (samples)
 const LP = { x: 0, y: 0, over: false, a: 0, lw: 0, span: 32 };
 let SEC = null;
-function loupe(L, X0, X1, Y0, Y1) {
+// src: the data under the loupe: first sample (off), count (n) and window (span); scene 4 shows the whole second, scene 3 the 10 ms
+function loupe(L, X0, X1, Y0, Y1, src = { off: 0, n: N, span: LP.span }) {
+  const N = src.n, SPAN = src.span, xs = k => x[src.off + k];
   const R = (W < 640 ? 180 : 220) / 2, c = clamp(Math.round((LP.x - X0) / (X1 - X0) * (N - 1)), 0, N - 1); // c: the sample under the crosshair
-  const half = LP.span / 2, a0 = c - half, a1 = c + half;
+  const half = SPAN / 2, a0 = c - half, a1 = c + half;
   // on the big graph: a thin light frame around the part shown in the loupe
   g.globalAlpha = LP.a;
   const fx0 = X0 + (X1 - X0) * a0 / (N - 1), fx1 = X0 + (X1 - X0) * a1 / (N - 1);
@@ -826,18 +832,18 @@ function loupe(L, X0, X1, Y0, Y1) {
   g.save(); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fillStyle = C.bg; g.fill(); g.clip();
   const ix0 = cx - R * .82, ix1 = cx + R * .82, A = R * .62, sx = k => ix0 + (ix1 - ix0) * (k - a0) / (a1 - a0), sy = v => cy - v * A;
   line(cx - R, cy, cx + R, cy, C.line, 1); // zero
-  const k0 = Math.max(0, Math.ceil(a0 - 1)), k1 = Math.min(N - 1, Math.floor(a1 + 1)), dr = clamp(R * 2.2 / LP.span, 1.6, 4);
-  g.beginPath(); for (let k = k0; k <= k1; k++) { const X = sx(k), Y = sy(x[k]); k === k0 ? g.moveTo(X, Y) : g.lineTo(X, Y); }
+  const k0 = Math.max(0, Math.ceil(a0 - 1)), k1 = Math.min(N - 1, Math.floor(a1 + 1)), dr = clamp(R * 2.2 / SPAN, 1.6, 4);
+  g.beginPath(); for (let k = k0; k <= k1; k++) { const X = sx(k), Y = sy(xs(k)); k === k0 ? g.moveTo(X, Y) : g.lineTo(X, Y); }
   g.strokeStyle = alpha(C.muted, .55); g.lineWidth = 1; g.stroke(); // thin line between the samples
-  for (let k = k0; k <= k1; k++) line(sx(k), cy, sx(k), sy(x[k]), alpha(C.sig, .55), 1); // stems to zero, as on slide 3
-  glow(C.sig, 6, () => { g.fillStyle = C.sig; g.beginPath(); for (let k = k0; k <= k1; k++) { const X = sx(k), Y = sy(x[k]); g.moveTo(X + dr, Y); g.arc(X, Y, dr, 0, 7); } g.fill(); });
+  for (let k = k0; k <= k1; k++) line(sx(k), cy, sx(k), sy(xs(k)), alpha(C.sig, .55), 1); // stems to zero, as on slide 3
+  glow(C.sig, 6, () => { g.fillStyle = C.sig; g.beginPath(); for (let k = k0; k <= k1; k++) { const X = sx(k), Y = sy(xs(k)); g.moveTo(X + dr, Y); g.arc(X, Y, dr, 0, 7); } g.fill(); });
   line(cx, cy - R, cx, cy + R, alpha(C.ink, .5), 1); // the crosshair, with the nearest sample on it
-  g.beginPath(); g.arc(sx(c), sy(x[c]), dr + 3, 0, 7); g.fillStyle = C.ink; g.fill(); g.strokeStyle = C.sig; g.lineWidth = 2; g.stroke();
-  const ns = Math.round(LP.span), ms = ns / 16; // the window, in whole samples
+  g.beginPath(); g.arc(sx(c), sy(xs(c)), dr + 3, 0, 7); g.fillStyle = C.ink; g.fill(); g.strokeStyle = C.sig; g.lineWidth = 2; g.stroke();
+  const ns = Math.round(SPAN), ms = ns / 16; // the window, in whole samples
   text(ns + " " + L.nSamp + " · " + (+ms.toFixed(2)) + " " + L.ms, cx, cy + R * .74, { a: "center", c: C.muted, size: FS * .8 }); // high enough to fit inside the circle
   g.restore();
   g.beginPath(); g.arc(cx, cy, R, 0, 7); glow(C.sig, 12, () => { g.strokeStyle = C.sig; g.lineWidth = 1.5; g.stroke(); });
-  sampleCard(L, c, x[c], cx, cy, { cx, cy, r: R + 4 }); // the card beside the loupe (never over it), as on slide 3
+  sampleCard(L, c, xs(c), cx, cy, { cx, cy, r: R + 4 }); // the card beside the loupe (never over it), as on slide 3
   g.globalAlpha = 1;
 }
 
@@ -1014,6 +1020,9 @@ cv.addEventListener("pointerdown", e => {
   LP.x = X; LP.y = Y; LP.over = overSec(X, Y);
 });
 cv.addEventListener("pointermove", e => {
+  if (step === 2 && !playing && SAMP) { // scene 3: the loupe follows the pointer over the 10 ms graph
+    const [X, Y] = secPos(e); LP.x = X; LP.y = Y; LP.over = X >= SAMP.X0 - 4 && X <= SAMP.X1 + 4 && Y >= SAMP.Y0 - 10 && Y <= SAMP.Y1 + 10; return;
+  }
   if (step !== 3 || playing) { LP.over = false; return; }
   const [X, Y] = secPos(e);
   if (PTRS.has(e.pointerId)) PTRS.set(e.pointerId, [e.clientX, e.clientY]);
