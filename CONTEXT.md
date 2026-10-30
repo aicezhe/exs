@@ -15,3 +15,5 @@ Colour roles:
 Canvas code takes colours only from `THEME`; no hex or rgba outside `theme.css`.
 
 Rule: no external libraries and no network; shared files only from `_shared/`.
+
+Block navigation: `_shared/blocks.js` is the one list of blocks (`window.EXS_BLOCKS`: n, title, sub, href, ready, chip). The home page draws its cards from it, and `_shared/swipe.js` finds the neighbouring ready blocks in it. Every block page has `<body data-block="N">` and loads `blocks.js` and `swipe.js` (defer) at the end of the body; a new block needs its entry in `blocks.js` and these two lines. Gestures: a two-finger trackpad swipe (horizontal wheel, summed to 90 px, 800 ms lock for inertia) or two fingers on a touch screen (at least 70 px sideways, under 700 ms, not a pinch). Fingers moving left go to the next block, right to the previous one. The page slides 40 px and fades; at the first or last ready block it bounces and shows a toast. A hint toast appears on the first visit (localStorage). Links end with `index.html`, so it also works from `file://`.

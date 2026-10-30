@@ -59,7 +59,7 @@
   }
 </style>
 </head>
-<body>
+<body data-block="1">
 <canvas id="c"></canvas>
 
 <div class="hud tl">
@@ -507,5 +507,7 @@ window.__exs = { nodes: () => NODES.map((n, k) => ({ label: n.label, x: pr[k].x,
 requestAnimationFrame(frame);
 })();
 </script>
+<script src="../_shared/blocks.js"></script>
+<script src="../_shared/swipe.js" defer></script>
 </body>
 </html>

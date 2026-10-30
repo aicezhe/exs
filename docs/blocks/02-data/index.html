@@ -70,7 +70,7 @@
   @media (prefers-reduced-motion: reduce) { #card { transition: none; } }
 </style>
 </head>
-<body>
+<body data-block="2">
 <canvas id="c"></canvas>
 
 <div class="hud tl" id="hud">
@@ -544,5 +544,7 @@ requestAnimationFrame(frame);
 window.__exs2 = { step: () => step, items: () => pieces.filter(p => p.type === 'path').map(p => ({ name: p.it.name, kind: p.it.kind, x: p.x, y: p.y, w: p.it.w })), layout: () => L, rows: () => OK.length, ignored: () => ITEMS.filter(i => i.kind === 'ignored').length, skipped: () => ITEMS.filter(i => i.kind === 'skipped').length };
 })();
 </script>
+<script src="../_shared/blocks.js"></script>
+<script src="../_shared/swipe.js" defer></script>
 </body>
 </html>

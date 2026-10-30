@@ -81,7 +81,7 @@
   @media (prefers-reduced-motion: reduce) { #card, #nav button, #tools button { transition: none; } }
 </style>
 </head>
-<body>
+<body data-block="4">
 <canvas id="c" aria-label="Clips: every recording is forced to exactly 1 second"></canvas>
 
 <div class="hud tl" id="hud">
@@ -667,5 +667,7 @@ window.__exs3 = {
 };
 })();
 </script>
+<script src="../_shared/blocks.js"></script>
+<script src="../_shared/swipe.js" defer></script>
 </body>
 </html>

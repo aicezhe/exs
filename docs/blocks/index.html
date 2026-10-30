@@ -124,6 +124,7 @@
 </main>
 
 <script src="./_shared/theme.js"></script>
+<script src="_shared/blocks.js"></script>
 <script>
 (() => {
 'use strict';
@@ -133,20 +134,7 @@
    otherwise it is shown as "soon". Paths are relative to this file
    (docs/blocks/index.html).
 ------------------------------------------------------------------ */
-const BLOCKS = [
-  { t: 'Imports',      s: 'Libraries and settings',          href: './01-imports/', ready: true },
-  { t: 'Dataset',      s: 'From files to a table',           href: './02-data/',    ready: true },
-  { t: 'Sound',        s: 'From a wave to numbers',          href: './03-sound/',   ready: true,  chip: 'animation' },
-  { t: 'Clips',        s: 'Make every clip 1 second',        href: './04-clips/',   ready: true },
-  { t: 'MFCC',         s: 'The 99 × 13 matrix',              href: './05-mfcc/',    ready: true,  chip: 'animation' },
-  { t: 'Split',        s: 'Train, validation, test',         href: './06-split/',   ready: true },
-  { t: 'Model',        s: 'A small CNN',                     href: './07-model/',   ready: true },
-  { t: 'Training',     s: 'Learning from examples',          href: null,            ready: false },
-  { t: 'Evaluation',   s: 'Accuracy and errors',             href: null,            ready: false },
-  { t: 'Quantization', s: 'Shrink to int8',                  href: null,            ready: false },
-  { t: 'Deployment',   s: 'Board to laptop',                 href: null,            ready: false },
-  { t: 'Experiments',  s: 'What moves the accuracy',         href: null,            ready: false },
-];
+const BLOCKS = window.EXS_BLOCKS.map(b => ({ t: b.title, s: b.sub, href: b.href, ready: b.ready, chip: b.chip }));
 
 const grid = document.getElementById('grid');
 BLOCKS.forEach((b, i) => {
