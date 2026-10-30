@@ -85,10 +85,132 @@
     #cap { font-size: 13px; bottom: 80px; }
   }
   @media (prefers-reduced-motion: reduce) { #card, #nav button, #tools button, #chips button { transition: none; } }
+
+  /* ---- the stage: one state per scene (data-scene), moved only by classes and transitions ---- */
+  #stage { position: fixed; left: 0; right: 0; top: var(--top, 170px); bottom: var(--bot, 130px); touch-action: pan-y; }
+  .wrap { position: relative; height: 100%; width: min(1100px, calc(100% - 2 * var(--pad, 32px))); margin: 0 auto; }
+  .layer { position: absolute; inset: 0; transition: opacity .3s ease; }
+  #modesLayer { opacity: 0; pointer-events: none; }
+  [data-scene="4"] #wordsLayer { opacity: 0; pointer-events: none; }
+  [data-scene="4"] #modesLayer { opacity: 1; pointer-events: auto; transition-delay: .25s; }
+
+  /* words */
+  #words { display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 16px; row-gap: 10px; align-content: start; }
+  .wcol { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+  .ps { height: calc(var(--rows) * (var(--ph) + var(--pg))); }   /* the room for the clip pills above a card */
+  .word { position: relative; font: inherit; color: var(--ink); text-align: center; cursor: pointer; height: var(--cardh); padding: 0;
+    border-radius: 14px; border: 1.3px solid var(--link); background: color-mix(in srgb, var(--bg-glow) 85%, transparent);
+    transition: background .2s, border-color .2s, color .2s, box-shadow .2s, opacity .5s, transform .5s; -webkit-tap-highlight-color: transparent; }
+  .word:hover, .word:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 40%, transparent); outline: none; }
+  .word .n { position: absolute; left: 14px; top: 12px; font: 700 12px var(--mono); color: var(--muted); }
+  .word { display: flex; align-items: center; justify-content: center; }
+  .word b { display: block; font: 700 var(--wsz, 28px)/1 var(--mono); }
+  .word small { position: absolute; left: 0; right: 0; bottom: 12px; font: 12px var(--mono); color: var(--muted); }
+  .word.sel { background: var(--neon); border-color: var(--neon); color: var(--on-neon); }
+  .word.sel .n, .word.sel small { color: var(--on-neon); }
+  .intro .word { animation: rise .5s ease both; animation-delay: calc(var(--i) * .26s + .12s); }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  /* the detail of a tapped word (scene 1) */
+  #detail { position: absolute; left: 0; right: 0; bottom: 0; top: var(--dtop, 60%); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 12px 20px;
+    border-radius: 14px; border: 1.1px solid var(--dim); background: color-mix(in srgb, var(--bg-glow) 50%, transparent); opacity: 0; pointer-events: none; transition: opacity .3s, border-color .3s; }
+  [data-scene="1"] #detail { opacity: 1; }
+  #detail.has { border-color: var(--panel-border); }
+  #detail .big { font: 700 clamp(34px, 5vw, 56px)/1.1 var(--head); color: var(--neon); }
+  #detail .act { margin-top: 8px; font: 400 clamp(14px, 1.6vw, 19px)/1.4 var(--mono); color: var(--ink); }
+  #detail .hint { color: var(--muted); font: 14px var(--mono); }
+
+  /* clips: small pills with a mini waveform inside */
+  #pills { position: absolute; inset: 0; pointer-events: none; }
+  .pill { position: absolute; left: 0; top: 0; width: var(--pw); height: var(--ph); box-sizing: border-box; border: 1px solid var(--gray); border-radius: 999px;
+    background: color-mix(in srgb, var(--gray) 14%, transparent); transform: translate(var(--hx), var(--hy)); opacity: 0;
+    transition: opacity .25s ease, transform .6s cubic-bezier(.2, .7, .2, 1), border-color .4s, background .4s; }
+  .pill svg { display: block; width: 100%; height: 100%; transition: opacity .3s; }
+  .pill path { fill: none; stroke: var(--gray); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+  [data-scene="2"] .pill { opacity: 1; transition-delay: var(--d), 0s, 0s, 0s; }
+  [data-scene="3"] .pill { opacity: .5; }
+  [data-scene="4"] .pill { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(var(--sx), var(--sy)); border-color: var(--link); background: var(--link); transition-delay: 0s, var(--fd), var(--fd), var(--fd); }
+  [data-scene="4"] .pill svg { opacity: 0; }
+  [data-scene="4"] .pill.x { opacity: 0; transition-delay: calc(var(--fd) + .45s), var(--fd), 0s, 0s; }
+
+  /* lines and people (scene 3) */
+  #lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  #lines path { fill: none; stroke: var(--link); stroke-width: 1.2; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: .55; transition: stroke-dashoffset .6s ease, opacity .25s, stroke .25s; }
+  [data-scene="3"] #lines path { stroke-dashoffset: 0; transition-delay: var(--ld), 0s, 0s; }
+  [data-scene="3"] #lines.pick path { opacity: .12; }
+  [data-scene="3"] #lines.pick path.sel { opacity: 1; stroke: var(--neon); stroke-width: 2; }
+  #people { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .person { display: flex; flex-direction: column; align-items: center; gap: 6px; font: inherit; color: var(--ink); background: none; border: 0; cursor: pointer; padding: 0; opacity: 0; transform: translateY(24px);
+    transition: opacity .4s, transform .4s; -webkit-tap-highlight-color: transparent; }
+  [data-scene="3"] .person { opacity: 1; transform: none; transition-delay: var(--pd); pointer-events: auto; }
+  .person { pointer-events: none; }
+  .dotc { width: var(--pr, 52px); height: var(--pr, 52px); border-radius: 50%; display: grid; place-items: center; font: 700 22px var(--mono);
+    background: color-mix(in srgb, var(--bg-glow) 95%, transparent); border: 1.4px solid var(--gray); transition: background .2s, border-color .2s, color .2s; }
+  .person.sel .dotc { background: var(--neon); border-color: var(--neon); color: var(--on-neon); }
+  .pname { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; font: 14px var(--mono); }
+  [data-scene="3"] .pname { width: calc(var(--n) * 1ch); transition: width .5s steps(var(--n)) calc(var(--pd) + .3s); }
+  .person.sel .pname { color: var(--neon); font-weight: 700; }
+  #stat { position: absolute; left: 0; right: 0; bottom: -26px; text-align: center; font: 700 14px var(--mono); color: var(--neon); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #stat.on { opacity: 1; }
+  [data-scene="3"] #stat { }
+  [data-scene]:not([data-scene="3"]) #stat { opacity: 0; }
+
+  /* the recording modes (scene 4) */
+  #modesTop { display: flex; justify-content: space-between; height: 20px; font: 12px var(--mono); color: var(--muted); }
+  #modesTop b { color: var(--neon); }
+  #modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .mode { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px 12px 14px; min-width: 0; font: inherit; text-align: left; color: var(--ink); cursor: pointer;
+    border-radius: 12px; border: 1.2px solid var(--link); background: color-mix(in srgb, var(--bg-glow) 85%, transparent); transition: border-color .2s, background .2s; -webkit-tap-highlight-color: transparent; }
+  .mode.on { border-color: var(--neon); background: color-mix(in srgb, var(--neon) 10%, var(--bg-glow)); }
+  .mode .lab { font: 700 12.5px/1.35 var(--mono); min-height: 2.7em; }
+  .mode.on .lab { color: var(--neon); }
+  .ill { position: relative; height: 62px; }
+  .mic, .who { position: absolute; top: 4px; width: 22px; height: 40px; color: var(--gray); }
+  .who { color: var(--ink); left: calc(30px + var(--f) * (100% - 62px)); }
+  .mic { left: 0; }
+  .dist { position: absolute; top: 46px; font: 11.5px var(--mono); color: var(--muted); transform: translateX(-50%); white-space: nowrap; left: calc(41px + var(--f) * (100% - 62px)); }
+  .wv { position: absolute; left: 26px; top: 4px; height: 40px; width: calc(var(--f) * (100% - 62px) - 4px); overflow: hidden; }
+  .wv svg { width: 100%; height: 100%; display: block; overflow: hidden; }
+  .wv .flat { stroke: var(--dim); stroke-width: 1; stroke-dasharray: 3 3; }
+  .wv .w, .wv .nz { fill: none; stroke: var(--neon); stroke-width: 1.8; stroke-linejoin: round; opacity: 0; transition: opacity .25s; }
+  .wv .nz { stroke-width: 1.2; }
+  .mode.on .wv .w, .mode.on .wv .nz { opacity: 1; }
+  .mode.on .wv .flat { opacity: 0; }
+  .wv g.s { animation: wvmove 1.1s linear infinite; animation-play-state: paused; }
+  .wv g.z { animation: wvmove 0.45s linear infinite; animation-play-state: paused; }
+  .mode.on .wv g { animation-play-state: running; }
+  @keyframes wvmove { from { transform: translateX(0); } to { transform: translateX(-24px); } }
+  .dots { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--dim); box-sizing: border-box; }
+  .mode .cnt { font: 11.5px var(--mono); color: var(--muted); }
+  .dist { }
+
+  @media (max-width: 699px) {
+    #words { grid-template-columns: repeat(2, 1fr); column-gap: 10px; row-gap: 8px; }
+    #modes { grid-template-columns: 1fr; gap: 6px; }
+    .mode { display: grid; grid-template-columns: 38% 1fr; grid-template-rows: auto auto; column-gap: 10px; row-gap: 4px; padding: 8px 10px; }
+    .mode .lab { grid-row: 1 / 3; font-size: 11px; align-self: start; }
+    .mode .cnt { grid-column: 2; grid-row: 2; }
+    .mode .dots { grid-column: 2; grid-row: 2; }
+    .mode .cnt { display: none; }
+    .ill { grid-column: 2; grid-row: 1; height: 38px; }
+    .mic, .who { height: 28px; width: 16px; top: 2px; }
+    .who { left: calc(22px + var(--f) * (100% - 46px)); }
+    .wv { left: 20px; height: 28px; top: 2px; width: calc(var(--f) * (100% - 46px) - 4px); }
+    .dist { top: 28px; font-size: 10px; left: calc(30px + var(--f) * (100% - 46px)); }
+    .word small { display: none; }
+    .word .n { top: 8px; left: 10px; }
+    #modesTop { font-size: 10.5px; }
+    .dotc { font-size: 18px; }
+    .pname { font-size: 12px; }
+    #detail .act { font-size: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
-<canvas id="c" aria-label="What: four spoken words, four people, five ways to record, the clip count, and what focus does on the laptop"></canvas>
 
 <div class="hud tl" id="hud">
   <a class="back" href="../index.html">← all blocks</a>
@@ -97,18 +219,31 @@
   <div class="sub">tap to explore</div>
 </div>
 
+<main id="stage" data-scene="1" aria-label="What: four spoken words, clips, four people, five ways to record">
+  <div class="wrap">
+    <div class="layer" id="wordsLayer">
+      <svg id="lines" aria-hidden="true"></svg>
+      <div id="words"></div>
+      <div id="detail" aria-live="polite"></div>
+      <div id="people"></div>
+      <div id="stat"></div>
+    </div>
+    <div class="layer" id="modesLayer">
+      <div id="modesTop"><b>recording protocol (planned)</b><span>illustrative waveform</span></div>
+      <div id="modes"></div>
+    </div>
+    <div id="pills" aria-hidden="true"></div>
+  </div>
+</main>
+
 <div id="cap" aria-live="polite"></div>
-<div id="tools">
-  <button id="say" type="button">Say: focus</button>
-</div>
-<nav id="nav" aria-label="Steps">
-  <button id="prev" type="button" aria-label="Previous step">←</button>
-  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-  <button id="next" type="button" aria-label="Next step">→</button>
+<nav id="nav" aria-label="Scenes">
+  <button id="prev" type="button" aria-label="Previous scene">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next scene">→</button>
   <a id="onward" href="../index.html#how" hidden>Next: How →</a>
 </nav>
 
-<script src="../_shared/theme.js"></script>
 <script>
 (() => {
 'use strict';
@@ -132,333 +267,187 @@ const MODES = [
 ];
 const DIST_M = { 'in front': 0.5, '1 m': 1, '2 m': 2 };   // metres, drawn in proportion
 const LOW_VOICE_GAIN = 0.5;
-const EXTRA_CLASSES_NOTE = null;   // a string here replaces the caption of the counting step
-const FOCUS_WINDOWS = [   // img: a screenshot, used as soon as the file exists
-  { name: 'VS Code',  img: 'assets/focus/vscode.png',   keep: true },
-  { name: 'Safari',   img: 'assets/focus/safari.png',   keep: true },
-  { name: 'Telegram', img: 'assets/focus/telegram.png', keep: false },
-  { name: 'Slack',    img: 'assets/focus/slack.png',    keep: false },
-  { name: 'Finder',   img: 'assets/focus/finder.png',   keep: false },
-  { name: 'Notes',    img: 'assets/focus/notes.png',    keep: false },
-  { name: 'Mail',     img: 'assets/focus/mail.png',     keep: false },
-  { name: 'Music',    img: 'assets/focus/music.png',    keep: false },
-];
 
-const PER_WORD_PER_PERSON = MODES.reduce((a, m) => a + m.count, 0);       // 29
-const PER_PERSON = PER_WORD_PER_PERSON * WORDS.length;                      // 116
-const TOTAL = PER_PERSON * PEOPLE.length;                                   // 464
+const PER_WORD_PER_PERSON = MODES.reduce((a, m) => a + m.count, 0);   // 29 clips per word, per person
+const PER_PERSON = PER_WORD_PER_PERSON * WORDS.length;                // 116
+const TOTAL = PER_PERSON * PEOPLE.length;                             // 464
 
 const CAPTIONS = [
   'Say one of four words. The laptop opens an app or closes the distractions.',
+  `${PER_WORD_PER_PERSON} one-second clips per word, per person`,
   'Four people say every word, so the model learns the word, not one voice.',
   'Distance, volume and noise change. The model must work in a classroom, not only in silence.',
-  'Plus clips of noise and unknown, recorded separately.',
-  'focus: everything closes except VS Code and Safari.',
 ];
-const NSTEPS = CAPTIONS.length;
+const NSCENES = CAPTIONS.length;
+const SVGNS = 'http://www.w3.org/2000/svg';
 
 const $ = id => document.getElementById(id);
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const mix = (a, b, t) => a + (b - a) * t;
-const ease = u => 1 - Math.pow(1 - u, 3);
-
-/* ------------------------------------------------------------------
-   Setup
------------------------------------------------------------------- */
-const cv = $('c'), ctx = cv.getContext('2d');
-const hudEl = $('hud'), capEl = $('cap'), toolsEl = $('tools'), sayBtn = $('say');
+const stage = $('stage'), capEl = $('cap'), hudEl = $('hud');
 const prevBtn = $('prev'), nextBtn = $('next'), onwardEl = $('onward');
 const dots = [...document.querySelectorAll('#dots i')];
 const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const MONO = THEME.mono, HEAD = THEME.head;
-let W = 0, H = 0, DPR = 0, narrow = false, fs = 14, step = 0, stepT0 = 0, now = 0;
-const L = {}, A = new Array(NSTEPS).fill(0); A[0] = 1;
-const UI = { word: -1, person: -1, mode: -1, modeT0: 0, focusOn: false, focusT0: 0 };
-let hits = [];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let scene = 1, sel = { word: -1, person: -1 };
 
-FOCUS_WINDOWS.forEach(w => { const im = new Image(); im.onload = () => { w.ok = true; w.im = im; }; im.src = w.img; });
-
-function rr(x, y, w, h, r) {
-  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
-function T(t, x, y, col, size, align = 'left', a = 1, weight = 400, font = MONO) {
-  ctx.globalAlpha = a; ctx.fillStyle = col; ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
-  ctx.fillText(t, x, y); ctx.globalAlpha = 1;
-}
-function fitSize(t, maxW, size, weight = 400, font = MONO) { ctx.font = `${weight} ${size}px ${font}`; const w = ctx.measureText(t).width; return w > maxW ? Math.max(8.5, size * maxW / w) : size; }
-function wrap(t, maxW, size, weight = 400) {
-  ctx.font = `${weight} ${size}px ${MONO}`; const out = []; let line = '';
-  t.split(' ').forEach(w => { const c = line ? line + ' ' + w : w; if (ctx.measureText(c).width > maxW && line) { out.push(line); line = w; } else line = c; });
-  if (line) out.push(line); return out;
-}
-function textBlock(t, x, y, maxW, size, col, a, lh, align = 'left', weight = 400) {
-  const lines = wrap(t, maxW, size, weight); lines.forEach((l, i) => T(l, x, y + i * lh, col, size, align, a, weight)); return lines.length * lh;
-}
-const stageA = (i, a) => (step === i ? a : 0);
-function hit(x, y, w, h, f) { hits.push({ x, y, w, h, f }); }
+const rng = makeRng(42);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const sv = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k])); return e; };
 
 /* ------------------------------------------------------------------
-   Layout
+   Build the DOM once. After this, scenes only toggle data-scene.
 ------------------------------------------------------------------ */
-function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  if (innerWidth === W && innerHeight === H && dpr === DPR) return;
-  W = innerWidth; H = innerHeight; DPR = dpr;
-  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-function layout() {
-  resize();
-  narrow = W < 700; fs = narrow ? 12.5 : 14.5;
-  const hudB = hudEl.getBoundingClientRect().bottom, capTop = capEl.getBoundingClientRect().top;
-  toolsEl.style.bottom = (H - capTop + 8) + 'px';
-  const pad = narrow ? 16 : 32, cw = Math.min(W - 2 * pad, 1100), x0 = (W - cw) / 2, y0 = hudB + 14;
-  const y1 = capTop - 8 - (step === 4 ? 38 + 8 : 0);
-  Object.assign(L, { pad, cw, x0, y0, y1, h: y1 - y0 });
+// words
+const wordsEl = $('words'), wcols = [];
+WORDS.forEach((w, i) => {
+  const col = el('div', 'wcol'), ps = el('div', 'ps'), b = el('button', 'word');
+  b.type = 'button'; b.style.setProperty('--i', i);
+  b.innerHTML = `<span class="n">${String(i + 1).padStart(2, '0')}</span><b>${w.word}</b><small>keyword</small>`;
+  b.addEventListener('click', () => { if (scene !== 1) return; sel.word = sel.word === i ? -1 : i; syncWords(); });
+  col.append(ps, b); wordsEl.appendChild(col); wcols.push({ col, ps, b });
+});
+function syncWords() {
+  wcols.forEach((c, i) => c.b.classList.toggle('sel', sel.word === i));
+  const d = $('detail'), w = WORDS[sel.word];
+  d.classList.toggle('has', !!w);
+  d.innerHTML = w ? `<div class="big">“${w.word}”</div><div class="act">→ ${w.action}</div>` : '<div class="hint">tap a word</div>';
 }
 
-/* ------------------------------------------------------------------
-   Step 1: four words
------------------------------------------------------------------- */
-function drawWords(a) {
-  const el = reduce ? 1e9 : now - stepT0, g = narrow ? 10 : 16, n = WORDS.length;
-  const cols = narrow ? 2 : 4, rows = Math.ceil(n / cols), cardW = (L.cw - (cols - 1) * g) / cols;
-  const cardH = narrow ? Math.min(110, (L.h - 150) / rows - g) : Math.min(210, L.h * .46);
-  WORDS.forEach((w, i) => {
-    const u = ease(clamp((el - 120 - i * 260) / 500, 0, 1)), x = L.x0 + (i % cols) * (cardW + g), y = L.y0 + Math.floor(i / cols) * (cardH + g) + (1 - u) * 18, sel = UI.word === i;
-    ctx.globalAlpha = a * u; rr(x, y, cardW, cardH, 14);
-    ctx.fillStyle = sel ? THEME.neon : THEME.a('bgGlow', .85); ctx.fill(); ctx.lineWidth = sel ? 2 : 1.3; ctx.strokeStyle = sel ? THEME.neon : THEME.link; ctx.stroke(); ctx.globalAlpha = 1;
-    const ink = sel ? THEME.onNeon : THEME.ink;
-    T(String(i + 1).padStart(2, '0'), x + 14, y + 20, sel ? THEME.onNeon : THEME.muted, fs - 1, 'left', a * u, 700);
-    const sz = fitSize(w.word, cardW - 24, narrow ? 22 : 30, 700);
-    T(w.word, x + cardW / 2, y + cardH / 2 + 4, ink, sz, 'center', a * u, 700);
-    T('keyword', x + cardW / 2, y + cardH - 18, sel ? THEME.onNeon : THEME.muted, fs - 2, 'center', a * u);
-    if (step === 0 && u > .6) hit(x, y, cardW, cardH, () => { UI.word = UI.word === i ? -1 : i; });
-  });
-  const py = L.y0 + rows * (cardH + g) + 8, ph = L.y1 - py, sel = UI.word >= 0 ? WORDS[UI.word] : null;
-  if (ph > 40) {
-    ctx.globalAlpha = a; rr(L.x0, py, L.cw, ph, 14); ctx.fillStyle = THEME.a('bgGlow', .5); ctx.fill(); ctx.strokeStyle = sel ? THEME.panelBorder : THEME.dim; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
-    if (!sel) T('tap a word', L.x0 + L.cw / 2, py + ph / 2, THEME.muted, fs + 1, 'center', a);
-    else {
-      const big = fitSize(sel.word, L.cw - 40, narrow ? 36 : 56, 700);
-      T('“' + sel.word + '”', L.x0 + L.cw / 2, py + Math.min(ph * .38, 56), THEME.neon, big, 'center', a, 700, HEAD);
-      const sz = narrow ? fs + 1 : fs + 4, lines = wrap('→ ' + sel.action, L.cw - 40, sz), lh = sz * 1.4, top = py + Math.min(ph * .38, 56) + big * .75;
-      lines.forEach((l, k) => T(l, L.x0 + L.cw / 2, top + k * lh, THEME.ink, sz, 'center', a));
-    }
+// clip pills: PER_WORD_PER_PERSON per word, each with its own little waveform
+const pillsEl = $('pills'), pills = [];
+function waveD(k) {
+  const g = makeRng(1000 + k), A = 1.2 + g() * 2.2, f = 0.5 + g() * .6, ph = g() * 6.28, pts = [];
+  for (let x = 3; x <= 25; x += 1.5) pts.push(`${x.toFixed(1)},${(5 + Math.sin(x * f + ph) * A * Math.sin(Math.PI * (x - 3) / 22)).toFixed(2)}`);
+  return 'M' + pts.join(' L');
+}
+WORDS.forEach((_, w) => {
+  for (let k = 0; k < PER_WORD_PER_PERSON; k++) {
+    const p = el('div', 'pill' + (w ? ' x' : '')), s = sv('svg', { viewBox: '0 0 28 10', preserveAspectRatio: 'none' });
+    s.appendChild(sv('path', { d: waveD(k * 7 + w) })); p.appendChild(s);
+    p.style.setProperty('--fd', Math.round(rng() * 260) + 'ms');
+    pillsEl.appendChild(p); pills.push({ el: p, w, k });
   }
-}
-
-/* ------------------------------------------------------------------
-   Step 2: four people, sixteen lines
------------------------------------------------------------------- */
-function drawPeople(a) {
-  const el = reduce ? 1e9 : now - stepT0, n = WORDS.length, m = PEOPLE.length, sel = UI.person;
-  const chipH = narrow ? 34 : 40, topY = L.y0 + 4, r = narrow ? 20 : 26, nodeY = L.y1 - (narrow ? 70 : 84);
-  const wx = i => L.x0 + (i + .5) * L.cw / n, px = j => L.x0 + (j + .5) * L.cw / m;
-  // lines first, under the nodes
-  PEOPLE.forEach((_, j) => WORDS.forEach((_, i) => {
-    const u = ease(clamp((el - 300 - (j * n + i) * 70) / 600, 0, 1)), on = sel === j, dim = sel >= 0 && !on;
-    const ax = px(j), ay = nodeY - r, bx = wx(i), by = topY + chipH;
-    ctx.save(); ctx.globalAlpha = a * (dim ? .14 : on ? 1 : .55); ctx.strokeStyle = on ? THEME.neon : THEME.link; ctx.lineWidth = on ? 2 : 1.2;
-    if (on) { ctx.shadowColor = THEME.neon; ctx.shadowBlur = 8; }
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(mix(ax, bx, u), mix(ay, by, u)); ctx.stroke(); ctx.restore();
-  }));
-  WORDS.forEach((w, i) => {
-    const cw = L.cw / n - 10, x = wx(i) - cw / 2;
-    ctx.globalAlpha = a; rr(x, topY, cw, chipH, 10); ctx.fillStyle = THEME.a('bgGlow', .9); ctx.fill(); ctx.strokeStyle = THEME.link; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
-    T(w.word, wx(i), topY + chipH / 2, THEME.ink, fitSize(w.word, cw - 10, fs + 1, 700), 'center', a, 700);
-  });
-  PEOPLE.forEach((p, j) => {
-    const u = ease(clamp((el - j * 140) / 500, 0, 1)), on = sel === j, cy = nodeY + (1 - u) * 40;
-    ctx.globalAlpha = a * u; ctx.beginPath(); ctx.arc(px(j), cy, r, 0, 6.283); ctx.fillStyle = on ? THEME.neon : THEME.a('bgGlow', .95); ctx.fill();
-    ctx.lineWidth = on ? 2.4 : 1.4; ctx.strokeStyle = on ? THEME.neon : THEME.gray; ctx.stroke(); ctx.globalAlpha = 1;
-    T(p[0], px(j), cy + 1, on ? THEME.onNeon : THEME.ink, r * .9, 'center', a * u, 700);
-    T(p, px(j), cy + r + 14, on ? THEME.neon : THEME.ink, fs, 'center', a * u, on ? 700 : 400);
-    if (step === 1 && u > .6) hit(px(j) - r - 10, cy - r - 8, 2 * r + 20, 2 * r + 36, () => { UI.person = UI.person === j ? -1 : j; });
-  });
-  const msg = sel >= 0 ? `${PER_WORD_PER_PERSON} clips per word × ${n} words = ${PER_PERSON} clips` : 'tap a person';
-  T(msg, L.x0 + L.cw / 2, L.y1 - 6, sel >= 0 ? THEME.neon : THEME.muted, fitSize(msg, L.cw, fs + 2, 700), 'center', a, sel >= 0 ? 700 : 400);
-}
-
-/* ------------------------------------------------------------------
-   Step 3: five ways to record
------------------------------------------------------------------- */
-const MAXD = Math.max(...Object.values(DIST_M));
-const gainOf = m => (1 / (1 + DIST_M[m.distance])) / (1 / (1 + Math.min(...Object.values(DIST_M)))) * (m.voice === 'low' ? LOW_VOICE_GAIN : 1);
-function wavePath(x, y, w, amp, t, noisy, live) {
-  ctx.beginPath(); const N = Math.max(24, Math.floor(w / 2));
-  for (let k = 0; k <= N; k++) {
-    const u = k / N, env = Math.sin(Math.PI * u) ** .6;
-    let v = live ? Math.sin(6.283 * (u * 5 - t * 1.4)) * env : 0;
-    if (live && noisy) v += .38 * (Math.sin(u * 83 + t * 9) + Math.sin(u * 131 - t * 7) * .8) / 1.8;
-    const px = x + u * w, py = y - v * amp;
-    k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-  }
-}
-function drawMic(x, y, s, col, a) {
-  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 1.6; rr(x - s * .28, y - s * .6, s * .56, s * .8, s * .28); ctx.stroke();
-  ctx.beginPath(); ctx.arc(x, y + s * .02, s * .5, .1 * Math.PI, .9 * Math.PI); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y + s * .52); ctx.lineTo(x, y + s * .78); ctx.stroke(); ctx.restore();
-}
-function drawPerson(x, y, s, col, a) {
-  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y - s * .45, s * .26, 0, 6.283); ctx.stroke();
-  ctx.beginPath(); ctx.arc(x, y + s * .62, s * .55, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke(); ctx.restore();
-}
-function drawMode(m, i, x, y, w, h, a) {
-  const sel = UI.mode === i, t = reduce ? 0 : (now - UI.modeT0) / 1000;
-  ctx.globalAlpha = a; rr(x, y, w, h, 12); ctx.fillStyle = sel ? THEME.a('neon', .1) : THEME.a('bgGlow', .85); ctx.fill();
-  ctx.lineWidth = sel ? 2 : 1.2; ctx.strokeStyle = sel ? THEME.neon : THEME.link; ctx.stroke(); ctx.globalAlpha = 1;
-  const lab = narrow ? { x: x + 10, y: y + 14, w: w * .38 - 6 } : { x: x + 12, y: y + 18, w: w - 24 }, lsz = narrow ? 11 : 12.5;
-  textBlock(`${m.id}. ${m.label}`, lab.x, lab.y, lab.w, lsz, sel ? THEME.neon : THEME.ink, a, lsz * 1.35, 'left', 700);
-  const il = narrow ? { x: x + w * .42, w: w * .54, cy: y + h * .38 } : { x: x + 14, w: w - 28, cy: y + h * .5 }, s = narrow ? 14 : 20;
-  const micX = il.x + s * .6, perX = il.x + il.w - s * .8 - (1 - DIST_M[m.distance] / MAXD) * (il.w - s * 3.2);
-  drawMic(micX, il.cy, s, THEME.gray, a); drawPerson(perX, il.cy, s, THEME.ink, a);
-  const wx = micX + s * .8, ww = perX - s * .8 - wx, amp = s * .9 * gainOf(m);
-  ctx.save(); ctx.globalAlpha = a * (sel ? 1 : .5); ctx.strokeStyle = sel ? THEME.neon : THEME.dim; ctx.lineWidth = sel ? 1.8 : 1.2; if (!sel) ctx.setLineDash([3, 3]);
-  wavePath(wx, il.cy, Math.max(4, ww), amp, t, m.noise, sel); ctx.stroke(); ctx.restore();
-  T(m.distance, perX, il.cy + s * 1.35, THEME.muted, narrow ? 10 : 11.5, 'center', a);
-  // one dot per recording
-  const dr = narrow ? 3.5 : 5, dg = dr * 2 + 4, dy = y + h - (narrow ? 14 : 22), dx0 = narrow ? il.x : x + 14;
-  for (let k = 0; k < m.count; k++) { ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(dx0 + dr + k * dg, dy, dr, 0, 6.283); ctx.fillStyle = THEME.link; ctx.fill(); ctx.globalAlpha = 1; }
-  T(`${m.count} per word`, narrow ? x + w - 10 : x + w - 12, dy, THEME.muted, narrow ? 10 : 11.5, 'right', a);
-  if (step === 2) hit(x, y, w, h, () => { UI.mode = UI.mode === i ? -1 : i; UI.modeT0 = performance.now(); });
-}
-function drawModes(a) {
-  const n = MODES.length, g = narrow ? 8 : 14, top = L.y0 + 4;
-  T('recording protocol (planned)', L.x0, top + 2, THEME.neon, fs - 1, 'left', a, 700);
-  T('illustrative waveform', L.x0 + L.cw, top + 2, THEME.muted, fs - 2.5, 'right', a);
-  const y = top + 18, ah = L.y1 - y - 4;
-  MODES.forEach((m, i) => {
-    const u = ease(clamp(((reduce ? 1e9 : now - stepT0) - i * 120) / 450, 0, 1));
-    if (narrow) { const h = (ah - (n - 1) * g) / n; drawMode(m, i, L.x0, y + i * (h + g) + (1 - u) * 14, L.cw, h, a * u); }
-    else { const w = (L.cw - (n - 1) * g) / n; drawMode(m, i, L.x0 + i * (w + g), y + (1 - u) * 14, w, Math.min(ah, 300), a * u); }
-  });
-}
-
-/* ------------------------------------------------------------------
-   Step 4: the count
------------------------------------------------------------------- */
-function drawCount(a) {
-  const el = reduce ? 1e9 : now - stepT0, ph = i => ease(clamp((el - i * 900) / 600, 0, 1));
-  T('recording protocol (planned)', L.x0, L.y0 + 2, THEME.neon, fs - 1, 'left', a, 700);
-  const parts = [
-    { big: String(PER_WORD_PER_PERSON), small: MODES.map(m => m.count).join(' + ') + ' modes', col: THEME.ink },
-    { big: '× ' + WORDS.length, small: 'words', col: THEME.ink },
-    { big: '× ' + PEOPLE.length, small: 'people', col: THEME.ink },
-    { big: '= ' + TOTAL, small: 'clips', col: THEME.neon },
-  ];
-  const sz = narrow ? 40 : clamp(L.cw / 12, 44, 80), midY = L.y0 + L.h * (narrow ? .38 : .36);
-  if (!narrow) {
-    ctx.font = `700 ${sz}px ${HEAD}`; const ws = parts.map(p => ctx.measureText(p.big).width), gap = sz * .55, total = ws.reduce((x, y) => x + y, 0) + gap * 3; let x = L.x0 + (L.cw - total) / 2;
-    parts.forEach((p, i) => {
-      const u = ph(i); T(p.big, x, midY + (1 - u) * 16, p.col, sz, 'left', a * u, 700, HEAD);
-      T(p.small, x + ws[i] / 2, midY + sz * .85, THEME.muted, fs - 1, 'center', a * u);
-      x += ws[i] + gap;
-    });
-  } else {
-    parts.forEach((p, i) => {
-      const u = ph(i), y = L.y0 + 44 + i * sz * 1.35 + (1 - u) * 12;
-      T(p.big, L.x0 + L.cw * .5, y, p.col, sz, 'center', a * u, 700, HEAD);
-      T(p.small, L.x0 + L.cw * .5 + (i === 0 ? 0 : 0), y + sz * .62, THEME.muted, fs - 2, 'center', a * u);
-    });
-  }
-  const u = ph(3), py = narrow ? L.y0 + 44 + 4 * sz * 1.35 + 14 : midY + sz * 2;
-  const per = `per person: ${PER_WORD_PER_PERSON} × ${WORDS.length} = ${PER_PERSON} clips`;
-  T(per, L.x0 + L.cw / 2, py, THEME.ink, fitSize(per, L.cw, fs + 3, 700), 'center', a * u, 700);
-  const rest = EXTRA_CLASSES_NOTE || null;
-  if (rest) T(rest, L.x0 + L.cw / 2, py + 28, THEME.muted, fitSize(rest, L.cw, fs), 'center', a * u);
-}
-
-/* ------------------------------------------------------------------
-   Step 5: focus in action
------------------------------------------------------------------- */
-function winRect(i, n) {
-  const cols = narrow ? 2 : 4, rows = Math.ceil(n / cols), g = narrow ? 8 : 14, top = L.y0 + 36, ah = L.y1 - top - 18;
-  const wd = (L.cw - (cols - 1) * g) / cols, ht = Math.min(wd * .62, (ah - (rows - 1) * g) / rows);
-  const w = Math.min(wd, ht / .62), h = w * .62, gx = (wd - w) / 2;
-  return { x: L.x0 + (i % cols) * (wd + g) + gx, y: top + Math.floor(i / cols) * (ht + g), w, h };
-}
-function drawWindow(win, r, a, kept) {
-  ctx.globalAlpha = a; rr(r.x, r.y, r.w, r.h, 8); ctx.fillStyle = THEME.a('bgGlow', .95); ctx.fill(); ctx.lineWidth = kept ? 2 : 1.2; ctx.strokeStyle = kept ? THEME.neon : THEME.gray; ctx.stroke();
-  const tb = Math.max(10, r.h * .13); ctx.fillStyle = THEME.a('gray', .2); ctx.fillRect(r.x + 1, r.y + 1, r.w - 2, tb);
-  [0, 1, 2].forEach(k => { ctx.beginPath(); ctx.arc(r.x + 8 + k * 8, r.y + 1 + tb / 2, 2.4, 0, 6.283); ctx.fillStyle = THEME.muted; ctx.fill(); });
-  ctx.save(); rr(r.x + 1, r.y + tb + 1, r.w - 2, r.h - tb - 2, 6); ctx.clip();
-  if (win.ok) { const s = Math.max((r.w - 2) / win.im.width, (r.h - tb - 2) / win.im.height); ctx.drawImage(win.im, r.x + 1, r.y + tb + 1, win.im.width * s, win.im.height * s); }
-  else { ctx.setLineDash([4, 4]); ctx.strokeStyle = THEME.dim; ctx.lineWidth = 1; ctx.strokeRect(r.x + 8, r.y + tb + 8, r.w - 16, r.h - tb - 16); ctx.setLineDash([]); }
-  ctx.restore(); ctx.globalAlpha = 1;
-  T(win.name, r.x + r.w / 2, r.y + r.h / 2 + tb * .4 - 4, THEME.ink, fitSize(win.name, r.w - 16, narrow ? 12 : 15, 700), 'center', a, 700);
-  if (!win.ok) T('screenshot', r.x + r.w / 2, r.y + r.h / 2 + tb * .4 + 14, THEME.muted, narrow ? 9.5 : 11, 'center', a);
-  if (kept) T('stays', r.x + r.w - 8, r.y + r.h - 10, THEME.neon, narrow ? 9.5 : 11, 'right', a, 700);
-}
-function drawFocus(a) {
-  const n = FOCUS_WINDOWS.length, el = UI.focusOn ? (reduce ? 1e9 : now - UI.focusT0) : 0, keepIdx = FOCUS_WINDOWS.map((w, i) => w.keep ? i : -1).filter(i => i >= 0);
-  FOCUS_WINDOWS.forEach((w, i) => {
-    const r = winRect(i, n); let x = r.x, y = r.y, s = 1, al = 1;
-    if (UI.focusOn) {
-      if (!w.keep) {
-        const k = FOCUS_WINDOWS.slice(0, i).filter(v => !v.keep).length, p = ease(clamp((el - k * 150) / 650, 0, 1)), dir = (r.x + r.w / 2) < L.x0 + L.cw / 2 ? -1 : 1;
-        x += dir * p * (W * .6); s = 1 - p * .35; al = 1 - p;
-      } else {
-        const idx = keepIdx.indexOf(i), p = ease(clamp((el - n * 120 - 300) / 800, 0, 1)), c = winRect(0, 1); const cx = L.x0 + L.cw / 2 + (idx - (keepIdx.length - 1) / 2) * (r.w + 16) - r.w / 2, cy = L.y0 + 36 + (L.y1 - L.y0 - 54 - r.h) / 2;
-        x = mix(r.x, cx, p); y = mix(r.y, cy, p);
-      }
-    }
-    if (al <= .01) return;
-    const cx = x + r.w / 2, cy = y + r.h / 2;
-    ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); drawWindow(w, { x, y, w: r.w, h: r.h }, a * al, UI.focusOn && w.keep); ctx.restore();
-  });
-  // Do Not Disturb indicator in the corner
-  const on = UI.focusOn && el > 900, p = on ? ease(clamp((el - 900) / 400, 0, 1)) : 0, label = `Do Not Disturb: ${on ? 'on' : 'off'}`, sz = fs - .5;
-  ctx.font = `700 ${sz}px ${MONO}`; const tw = ctx.measureText(label).width + 40, px = L.x0 + L.cw - tw, py = L.y0 + 4;
-  ctx.globalAlpha = a; rr(px, py, tw, 26, 13); ctx.fillStyle = on ? THEME.a('neon', .14 + .1 * p) : THEME.a('bgGlow', .8); ctx.fill(); ctx.strokeStyle = on ? THEME.neon : THEME.dim; ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.beginPath(); ctx.arc(px + 15, py + 13, 5, .5 * Math.PI, 1.5 * Math.PI); ctx.arc(px + 17.5, py + 13, 4, 1.5 * Math.PI, .5 * Math.PI, true); ctx.fillStyle = on ? THEME.neon : THEME.muted; ctx.fill(); ctx.globalAlpha = 1;
-  T(label, px + 28, py + 13, on ? THEME.neon : THEME.muted, sz, 'left', a, 700);
-  T(UI.focusOn ? '' : 'all windows are open', L.x0, L.y0 + 17, THEME.muted, fs - 1, 'left', a);
-  T('illustrative screenshots', L.x0, L.y1 - 2, THEME.muted, fs - 2.5, 'left', a);
-}
-
-/* ------------------------------------------------------------------
-   Loop and controls
------------------------------------------------------------------- */
-let last = 0;
-function frame(ts) {
-  const dt = Math.min(.05, last ? ts / 1000 - last : .016); last = ts / 1000; now = performance.now();
-  const k = reduce ? 1 : Math.min(1, dt * 7);
-  for (let i = 0; i < NSTEPS; i++) A[i] += ((i === step ? 1 : 0) - A[i]) * k;
-  ctx.clearRect(0, 0, W, H); hits = [];
-  const draw = [drawWords, drawPeople, drawModes, drawCount, drawFocus];
-  draw.forEach((f, i) => { if (A[i] > .01) f(A[i]); });
-  requestAnimationFrame(frame);
-}
-function syncUI() {
-  dots.forEach((d, i) => d.classList.toggle('on', i === step));
-  prevBtn.disabled = step === 0; nextBtn.hidden = step === NSTEPS - 1; onwardEl.hidden = step !== NSTEPS - 1;
-  capEl.textContent = step === 3 && EXTRA_CLASSES_NOTE ? EXTRA_CLASSES_NOTE : CAPTIONS[step];
-  toolsEl.classList.toggle('on', step === 4);
-  sayBtn.textContent = UI.focusOn ? 'Reset' : 'Say: focus';
-}
-function go(n) { n = clamp(n, 0, NSTEPS - 1); if (n === step) return; step = n; stepT0 = performance.now(); syncUI(); layout(); }
-prevBtn.addEventListener('click', () => go(step - 1)); nextBtn.addEventListener('click', () => go(step + 1));
-sayBtn.addEventListener('click', () => { UI.focusOn = !UI.focusOn; UI.focusT0 = performance.now(); syncUI(); });
-addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(step + 1); else if (e.key === 'ArrowLeft') go(step - 1); });
-addEventListener('resize', layout);
-
-// a tap hits a card, a one-finger swipe changes the step
-let down = null;
-cv.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now(), type: e.pointerType }; });
-cv.addEventListener('pointercancel', () => { down = null; });
-cv.addEventListener('pointerup', e => {
-  if (!down) return; const d = down; down = null;
-  const dx = e.clientX - d.x, dy = e.clientY - d.y;
-  if (d.type !== 'mouse' && Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { go(step + (dx < 0 ? 1 : -1)); return; }
-  if (Math.hypot(dx, dy) > 10) return;
-  for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (e.clientX >= h.x && e.clientX <= h.x + h.w && e.clientY >= h.y && e.clientY <= h.y + h.h) { h.f(); break; } }
 });
 
-syncUI(); layout();
-document.fonts && document.fonts.ready.then(layout);
-requestAnimationFrame(frame);
+// lines and people
+const linesEl = $('lines'), peopleEl = $('people'), people = [], lines = [];
+PEOPLE.forEach((name, j) => {
+  const b = el('button', 'person'); b.type = 'button'; b.style.setProperty('--pd', ((j * WORDS.length + WORDS.length - 1) * 70 + 450) + 'ms'); b.style.setProperty('--n', name.length);
+  b.innerHTML = `<span class="dotc">${name[0]}</span><span class="pname">${name}</span>`;
+  b.addEventListener('click', () => { if (scene !== 3) return; sel.person = sel.person === j ? -1 : j; syncPeople(); });
+  peopleEl.appendChild(b); people.push(b);
+  WORDS.forEach((_, i) => { const p = sv('path', { pathLength: 1 }); p.style.setProperty('--ld', ((j * WORDS.length + i) * 70) + 'ms'); linesEl.appendChild(p); lines.push({ el: p, i, j }); });
+});
+function syncPeople() {
+  people.forEach((b, j) => b.classList.toggle('sel', sel.person === j));
+  lines.forEach(l => l.el.classList.toggle('sel', sel.person === l.j));
+  linesEl.classList.toggle('pick', sel.person >= 0);
+  const st = $('stat'); st.textContent = sel.person >= 0 ? `${PER_WORD_PER_PERSON} clips per word × ${WORDS.length} words = ${PER_PERSON} clips` : '';
+  st.classList.toggle('on', sel.person >= 0);
+}
 
-window.__what = { step: () => step, totals: () => ({ perWordPerPerson: PER_WORD_PER_PERSON, perPerson: PER_PERSON, total: TOTAL }), ui: () => ({ ...UI }), hits: () => hits.length, layout: () => L };
+// recording modes: a card with an illustration, a waveform that can be played, and one dot per recording
+const modesEl = $('modes'), dotsOf = [], MAXD = Math.max(...Object.values(DIST_M)), MIND = Math.min(...Object.values(DIST_M));
+const gainOf = m => ((1 / (1 + DIST_M[m.distance])) / (1 / (1 + MIND))) * (m.voice === 'low' ? LOW_VOICE_GAIN : 1);   // farther or quieter: smaller wave
+const MIC = '<svg class="mic" viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="6" y="2" width="10" height="18" rx="5"/><path d="M2 16a9 9 0 0 0 18 0M11 25v9M6 36h10"/></svg>';
+const WHO = '<svg class="who" viewBox="0 0 22 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="9" r="6"/><path d="M1 38a10 10 0 0 1 20 0"/></svg>';
+function wavePath(amp, f, seed, noisy) {
+  const g = makeRng(seed), pts = []; const step = noisy ? 1.2 : 2;
+  for (let x = 0; x <= 168; x += step) {
+    const y = noisy ? 20 + (g() - .5) * amp * 1.7 : 20 + Math.sin(x * f) * amp;
+    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  return 'M' + pts.join(' L');
+}
+MODES.forEach((m, i) => {
+  const b = el('button', 'mode'); b.type = 'button'; b.style.setProperty('--f', (DIST_M[m.distance] / MAXD).toFixed(3));
+  const amp = 15 * gainOf(m) / 1;   // wave height in svg units (the svg is 40 high)
+  b.innerHTML = `<span class="lab">${m.id}. ${m.label}</span>` +
+    `<span class="ill">${MIC}${WHO}<span class="wv"><svg viewBox="0 0 120 40" preserveAspectRatio="none"><line class="flat" x1="0" y1="20" x2="120" y2="20"/>` +
+    `<g class="s"><path class="w" d="${wavePath(amp, 2 * Math.PI / 24, 1, false)}"/></g>` +
+    (m.noise ? `<g class="z"><path class="nz" d="${wavePath(14, 0, 77, true)}"/></g>` : '') + `</svg></span><span class="dist">${m.distance}</span></span>`;
+  const row = el('span', 'dots'), mine = [];
+  for (let k = 0; k < m.count; k++) { const d = el('i'); row.appendChild(d); mine.push(d); dotsOf.push(d); }
+  b.appendChild(row); b.appendChild(el('span', 'cnt', `${m.count} per word`));
+  b.addEventListener('click', () => { if (scene !== 4) return; const on = !b.classList.contains('on'); modeCards.forEach(c => c.classList.remove('on')); b.classList.toggle('on', on); });
+  modesEl.appendChild(b);
+});
+const modeCards = [...modesEl.children];
+
+/* ------------------------------------------------------------------
+   Layout: sizes into CSS variables, then the home and landing positions of the pills
+------------------------------------------------------------------ */
+function layout() {
+  const narrow = innerWidth < 700, pad = narrow ? 16 : 32;
+  const hudB = hudEl.getBoundingClientRect().bottom, capTop = capEl.getBoundingClientRect().top;
+  stage.style.setProperty('--top', (hudB + 10) + 'px'); stage.style.setProperty('--bot', (innerHeight - capTop + 8) + 'px'); stage.style.setProperty('--pad', pad + 'px');
+  const ppr = narrow ? 6 : 8, rows = Math.ceil(PER_WORD_PER_PERSON / ppr), pg = 3;
+  stage.style.setProperty('--rows', rows); stage.style.setProperty('--pg', pg + 'px');
+  // the card height and the width of a pill depend on the room
+  const colW = (stage.querySelector('.wrap').clientWidth - (narrow ? 10 : 3 * 16)) / (narrow ? 2 : 4);
+  const pw = narrow ? Math.min(24, Math.floor((colW - (ppr - 1) * pg) / ppr)) : 28, ph = narrow ? 9 : 10;
+  stage.style.setProperty('--pw', pw + 'px'); stage.style.setProperty('--ph', ph + 'px');
+  const stageH = stage.clientHeight, cardH = narrow ? 56 : clamp(stageH * .2, 100, 150);
+  stage.style.setProperty('--cardh', cardH + 'px'); stage.style.setProperty('--wsz', (narrow ? 20 : 28) + 'px'); stage.style.setProperty('--pr', (narrow ? 40 : 52) + 'px');
+  const wl = wordsEl.getBoundingClientRect(), wrapR = stage.querySelector('.wrap').getBoundingClientRect();
+  stage.style.setProperty('--dtop', (wl.bottom - wrapR.top + 14) + 'px');
+  // lines: from the bottom of each word to the top of each person
+  const lr = linesEl.getBoundingClientRect(); linesEl.setAttribute('viewBox', `0 0 ${lr.width} ${lr.height}`);
+  lines.forEach(l => {
+    const a = wcols[l.i].b.getBoundingClientRect(), b = people[l.j].querySelector('.dotc').getBoundingClientRect();
+    l.el.setAttribute('d', `M${a.left + a.width / 2 - lr.left},${a.bottom - lr.top} L${b.left + b.width / 2 - lr.left},${b.top - lr.top}`);
+  });
+  // pills: home above the word cards, landing spots over the dots of the mode cards
+  const o = pillsEl.getBoundingClientRect(), gw = ppr * pw + (ppr - 1) * pg;
+  pills.forEach(p => {
+    const r = wcols[p.w].ps.getBoundingClientRect(), col = p.k % ppr, row = Math.floor(p.k / ppr);
+    const hx = r.left - o.left + (r.width - gw) / 2 + col * (pw + pg), hy = r.bottom - o.top - (rows - row) * (ph + pg) + pg;
+    const d = dotsOf[p.k].getBoundingClientRect(), dd = d.width;
+    p.el.style.setProperty('--hx', hx.toFixed(1) + 'px'); p.el.style.setProperty('--hy', hy.toFixed(1) + 'px');
+    p.el.style.setProperty('--tx', (d.left - o.left + d.width / 2 - pw / 2).toFixed(1) + 'px'); p.el.style.setProperty('--ty', (d.top - o.top + d.height / 2 - ph / 2).toFixed(1) + 'px');
+    p.el.style.setProperty('--sx', (dd / pw).toFixed(3)); p.el.style.setProperty('--sy', (dd / ph).toFixed(3));
+    // a wave from left to right: by column, then row
+    p.el.style.setProperty('--d', (((p.w * ppr + col) + row) * 25) + 'ms');
+  });
+}
+
+/* ------------------------------------------------------------------
+   Scenes
+------------------------------------------------------------------ */
+function setScene(n, instant) {
+  scene = clamp(n, 1, NSCENES);
+  stage.dataset.scene = String(scene); document.body.dataset.scene = String(scene);
+  dots.forEach((d, i) => d.classList.toggle('on', i === scene - 1));
+  prevBtn.disabled = scene === 1; nextBtn.hidden = scene === NSCENES; onwardEl.hidden = scene !== NSCENES;
+  capEl.textContent = CAPTIONS[scene - 1];
+  if (scene !== 1 && sel.word >= 0) { sel.word = -1; syncWords(); }
+  if (scene !== 3) { sel.person = -1; syncPeople(); }
+  if (scene !== 4) modeCards.forEach(c => c.classList.remove('on'));
+  layout();
+}
+prevBtn.addEventListener('click', () => setScene(scene - 1)); nextBtn.addEventListener('click', () => setScene(scene + 1));
+addEventListener('keydown', e => { if (e.key === 'ArrowRight') setScene(scene + 1); else if (e.key === 'ArrowLeft') setScene(scene - 1); });
+addEventListener('resize', layout);
+
+// one-finger swipe changes the scene; the click that follows a swipe is ignored
+let down = null, swiped = false;
+stage.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, type: e.pointerType }; swiped = false; });
+stage.addEventListener('pointercancel', () => { down = null; });
+stage.addEventListener('pointerup', e => {
+  if (!down) return; const d = down; down = null; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+  if (d.type !== 'mouse' && Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { swiped = true; setScene(scene + (dx < 0 ? 1 : -1)); }
+});
+stage.addEventListener('click', e => { if (swiped) { e.stopPropagation(); e.preventDefault(); swiped = false; } }, true);
+
+syncWords(); syncPeople();
+setScene(1);
+document.fonts && document.fonts.ready.then(layout);
+if (!reduce) { document.body.classList.add('intro'); setTimeout(() => document.body.classList.remove('intro'), 1600); }
+
+window.__what = { scene: () => scene, totals: () => ({ perWordPerPerson: PER_WORD_PER_PERSON, perPerson: PER_PERSON, total: TOTAL }), go: setScene, pills: () => pills.length, dots: () => dotsOf.length };
 })();
 </script>
 </body>
