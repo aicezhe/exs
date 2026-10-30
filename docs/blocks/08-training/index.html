@@ -134,7 +134,7 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
-<body data-block="8">
+<body data-swipe1 data-block="8">
 
 <div class="hud" id="hud">
   <a class="back" href="../index.html#how">← all blocks</a>
@@ -624,15 +624,6 @@ document.addEventListener('click', e => { if (cardKey && !card.contains(e.target
 let lastNarrow = innerWidth < 760, rz = 0;
 addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { fitTop(); const nw = innerWidth < 760; if (nw !== lastNarrow) { lastNarrow = nw; if (scene === 1) buildScene1(); } }, 120); });
 
-// one-finger swipe changes the scene; the click that follows a swipe is ignored
-let down = null, swiped = false;
-stage.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, type: e.pointerType }; swiped = false; });
-stage.addEventListener('pointercancel', () => { down = null; });
-stage.addEventListener('pointerup', e => {
-  if (!down) return; const d = down; down = null; const dx = e.clientX - d.x, dy = e.clientY - d.y;
-  if (d.type !== 'mouse' && Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { swiped = true; setScene(scene + (dx < 0 ? 1 : -1)); }
-});
-stage.addEventListener('click', e => { if (swiped) { e.stopPropagation(); e.preventDefault(); swiped = false; } }, true);
 
 setScene(1);
 document.fonts && document.fonts.ready.then(fitTop);

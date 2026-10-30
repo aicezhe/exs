@@ -1,7 +1,7 @@
 /* Two-finger swipe between blocks: a trackpad swipe (wheel) or two fingers on a touch screen.
    Fingers moving left go to the next block, fingers moving right go to the previous one.
    Reads the block number from <body data-block="N"> and the neighbours from window.EXS_BLOCKS.
-   One-finger gestures and pinches are left alone. Works from file:// (links end with index.html). */
+   One-finger gestures are left alone unless the page has data-swipe1; pinches are always left alone. Works from file:// (links end with index.html). */
 (() => {
   'use strict';
   const N = parseInt(document.body && document.body.dataset.block, 10);
@@ -84,9 +84,18 @@
   // touch: exactly two fingers moving together sideways
   let g = null;
   const mid = ts => ({ x: (ts[0].clientX + ts[1].clientX) / 2, y: (ts[0].clientY + ts[1].clientY) / 2, d: Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY) });
+  // pages with data-swipe1 (no one-finger drags inside) also accept one finger moving sideways
+  const one = document.body.hasAttribute('data-swipe1'); let f = null;
   addEventListener('touchstart', e => {
-    if (e.touches.length === 2) g = { ...mid(e.touches), t: performance.now() };
-    else if (e.touches.length > 2) g = null;
+    if (e.touches.length === 2) { g = { ...mid(e.touches), t: performance.now() }; f = null; }
+    else if (e.touches.length > 2) { g = null; f = null; }
+    else if (one) f = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now() };
+  }, { passive: true });
+  addEventListener('touchend', e => {
+    if (!f || e.touches.length) return;
+    const s = f, c = e.changedTouches[0]; f = null;
+    const dx = c.clientX - s.x, dy = c.clientY - s.y;
+    if (performance.now() - s.t < TOUCH_MS && Math.abs(dx) >= TOUCH_DX && Math.abs(dx) >= 1.5 * Math.abs(dy)) go(dx < 0 ? 1 : -1);
   }, { passive: true });
   addEventListener('touchmove', e => { if (g && e.touches.length === 2) g.last = mid(e.touches); else if (e.touches.length !== 2) { /* one finger lifted: the end decides */ } }, { passive: true });
   addEventListener('touchend', e => {
