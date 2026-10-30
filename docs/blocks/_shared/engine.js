@@ -1048,14 +1048,7 @@ function syncNav() {
   dotBtns.forEach((b, k) => b.setAttribute("aria-current", String(PAGE.first + k === step)));
   prevBtn.disabled = step === PAGE.first; nextBtn.disabled = step === PAGE.last; onward.hidden = step !== PAGE.last;
 }
-let swipe = null; // a quick horizontal drag on a touch screen: next / previous scene (not on a playhead, the progress line or the loupe graph)
-cv.addEventListener("pointerdown", e => { swipe = e.pointerType === "touch" && e.isPrimary && !scrub && !onBar(e) && !(step === 3 && !playing && overSec(...secPos(e))) ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
-cv.addEventListener("pointerup", e => {
-  if (!swipe) return; const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
-  if (Math.abs(dx) > 60 && Math.abs(dy) < 45 && performance.now() - swipe.t < 700) go(step + (dx < 0 ? 1 : -1));
-  swipe = null;
-});
-cv.addEventListener("pointercancel", () => { swipe = null; });
+
 
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;

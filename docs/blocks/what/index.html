@@ -241,7 +241,7 @@
   <button id="prev" type="button" aria-label="Previous scene">←</button>
   <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <button id="next" type="button" aria-label="Next scene">→</button>
-  <a id="onward" href="../index.html#how" hidden>Next: How →</a>
+  <a id="onward" href="../index.html" hidden>Main screen →</a>
 </nav>
 
 <script>
@@ -450,5 +450,6 @@ if (!reduce) { document.body.classList.add('intro'); setTimeout(() => document.b
 window.__what = { scene: () => scene, totals: () => ({ perWordPerPerson: PER_WORD_PER_PERSON, perPerson: PER_PERSON, total: TOTAL }), go: setScene, pills: () => pills.length, dots: () => dotsOf.length };
 })();
 </script>
+<script src="../_shared/tapstep.js"></script>
 </body>
 </html>

@@ -449,7 +449,7 @@ function buildScene3() {
     };
     raf = requestAnimationFrame(frame); S3.stop = () => { stopped = true; cancelAnimationFrame(raf); lightRow(-1); };
   }
-  svg.addEventListener('click', runBall);
+  svg.setAttribute('data-own-tap', ''); svg.addEventListener('click', runBall);
 
   // mini-demo: per-weight steps (SGD or Adam), a picture of the formula, not a result on our model
   const demo = html('div', 'demo', right), h3 = html('h3', '', demo, 'Why per-weight steps '); html('span', 'illus', h3, 'illustrative');
@@ -595,7 +595,7 @@ function buildScene5() {
     else if (state === 'run') { state = 'pause'; clearTimeout(timer); draw(); }
     else if (state === 'pause') { state = 'run'; draw(); tick(); }
   }
-  btn.addEventListener('click', e => { e.stopPropagation(); toggle(); }); svg.addEventListener('click', toggle);
+  btn.addEventListener('click', e => { e.stopPropagation(); toggle(); }); svg.setAttribute('data-own-tap', ''); svg.addEventListener('click', toggle);
   S5.stop = () => { clearTimeout(timer); if (restoreStop) restoreStop(); };
   S5.api = { epochs: () => n, state: () => state, stopEpoch: stopE, best: finalBest, toggle };
   reset();
@@ -632,6 +632,6 @@ window.__exs = { scene: () => scene, go: setScene, s4: () => S4.t, advance4: () 
 })();
 </script>
 <script src="../_shared/blocks.js"></script>
-<script src="../_shared/swipe.js" defer></script>
+<script src="../_shared/tapstep.js"></script><script src="../_shared/swipe.js" defer></script>
 </body>
 </html>
