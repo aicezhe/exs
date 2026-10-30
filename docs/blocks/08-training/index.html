@@ -11,8 +11,8 @@
   body { background: var(--page-bg); }
   button { font: inherit; color: inherit; }
 
-  .hud { position: fixed; z-index: 2; top: 22px; left: 32px; right: 32px; pointer-events: none; }
-  .back { display: inline-block; margin: 0 0 10px; padding: 7px 14px; border: 1px solid var(--neon); border-radius: 999px; color: var(--ink);
+  .hud { position: fixed; z-index: 2; top: 28px; left: 32px; right: 32px; pointer-events: none; }
+  .back { display: inline-block; margin: 0 0 10px; padding: 8px 14px; border: 1px solid var(--neon); border-radius: 999px; color: var(--ink);
     font-size: 14px; text-decoration: none; pointer-events: auto; transition: box-shadow .2s, background .2s, color .2s; }
   .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
   .back:active { background: var(--neon); color: var(--on-neon); }
@@ -123,7 +123,7 @@
   #tip.on { opacity: 1; }
 
   @media (max-width: 760px) {
-    .hud { left: 16px; right: 16px; top: 14px; }
+    .hud { left: 16px; right: 16px; top: 18px; }
     .scene { width: calc(100% - 32px); }
     .two, .s5 { grid-template-columns: 1fr; }
     #batches { grid-template-columns: 1fr; gap: 8px; }
