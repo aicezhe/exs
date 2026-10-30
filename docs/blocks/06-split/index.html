@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 6 · Split</title>
+<link rel="stylesheet" href="../_shared/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--body); }
+  body { background: var(--page-bg); }
+  /* touch-action: none: a finger on the graph never scrolls the page */
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud { position: fixed; pointer-events: none; z-index: 2; }
+  .hud.tl { top: 28px; left: 32px; }
+  /* "← all blocks" and "← Previous": links in the HUD (which ignores the pointer, so the links turn it on) */
+  .back { display: inline-block; margin: 0 0 14px; padding: 8px 14px; border: 1px solid var(--neon);
+    border-radius: 999px; color: var(--ink); font-size: 14px; text-decoration: none; pointer-events: auto;
+    transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 8px 0 6px; font: 700 clamp(24px, 3.2vw, 40px)/1.15 var(--head); letter-spacing: -.01em; }
+  .sub { font-size: 14px; color: var(--muted); }
+
+  /* step caption and the step controls, bottom centre */
+  #cap { position: fixed; z-index: 2; left: 50%; bottom: 86px; transform: translateX(-50%); width: min(660px, calc(100vw - 32px));
+    text-align: center; font-size: 14.5px; line-height: 1.45; color: var(--ink); pointer-events: none; min-height: 21px; }
+  #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
+  #nav button, #tools button, #chips button, .tool button { font: inherit; color: var(--ink); background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon);
+    cursor: pointer; display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px);
+    transition: border-color .2s, box-shadow .2s, opacity .2s, background .2s, color .2s; -webkit-tap-highlight-color: transparent; }
+  #nav button:hover:not(:disabled), #nav button:focus-visible, #tools button:hover, #tools button:focus-visible, #chips button:hover, #chips button:focus-visible,
+  .tool button:hover, .tool button:focus-visible, #onward:hover, #onward:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  #nav button:active:not(:disabled), #tools button:active, .tool button:active, #onward:active { background: var(--neon); color: var(--on-neon); }
+  #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; box-shadow: 0 0 22px color-mix(in srgb, var(--neon) 25%, transparent); }
+  #nav button[hidden] { display: none; }
+  #nav button:disabled { opacity: .3; cursor: default; box-shadow: none; }
+  #onward { height: 44px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 22px; white-space: nowrap; font-size: 14px; color: var(--ink);
+    text-decoration: none; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); box-shadow: 0 0 18px color-mix(in srgb, var(--neon) 25%, transparent); }
+  #onward[hidden] { display: none; }
+  /* the next block does not exist yet: the link is shown but does nothing */
+  #onward[aria-disabled="true"] { opacity: .4; box-shadow: none; pointer-events: none; cursor: default; }
+  #dots { display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
+  #dots i.on { background: var(--neon); border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
+
+  /* the switches of the steps, just above the caption */
+  #tools { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); display: none; gap: 10px; white-space: nowrap; }
+  #tools.on { display: flex; }
+  #tools button { height: 38px; padding: 0 18px; border-radius: 19px; font-size: 14px; }
+  #tools button[hidden] { display: none; }
+  #tools button[aria-pressed="true"] { background: var(--neon); color: var(--on-neon); }
+
+  /* speaker chips: the border is the colour of the speaker, a neon fill marks the chosen one */
+  #chips { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
+  #chips.on { display: flex; }
+  #chips button { height: 38px; padding: 0 14px; border-radius: 19px; font: 700 14px var(--mono); display: inline-flex; align-items: center; gap: 8px; border-color: var(--c); }
+  #chips button i { width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--c); }
+  #chips button[aria-pressed="true"] { background: var(--neon); color: var(--on-neon); border-color: var(--neon); box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); }
+  #chips button[aria-pressed="true"] i { border-color: var(--on-neon); }
+
+  #card {
+    position: fixed; z-index: 3; width: min(360px, 88vw); padding: 18px 20px 16px;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
+    backdrop-filter: blur(6px); pointer-events: none;
+    opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease;
+  }
+  #card.on { opacity: 1; transform: none; }
+  #card.quiet { border-color: color-mix(in srgb, var(--gray) 55%, transparent); box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent); }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    background: var(--neon); color: var(--on-neon); }
+  #card.quiet .tag { background: var(--gray); }
+  #card h2 { margin: 8px 0 10px; font: 700 22px/1.15 var(--mono); color: var(--neon); word-break: break-word; }
+  #card.quiet h2 { color: var(--ink); }
+  #card code { display: block; padding: 7px 10px; border-radius: 8px; background: var(--code-bg);
+    color: var(--code-ink); font: 400 13px/1.4 var(--mono); margin-bottom: 12px; word-break: break-word; }
+  #card p { margin: 0; font-size: 14.5px; line-height: 1.5; }
+  @media (max-width: 700px) {
+    #card { left: 16px !important; right: 16px; top: auto !important; bottom: 100px; width: auto; }
+    .hud.tl { left: 16px; top: 18px; }
+    #cap { font-size: 13px; bottom: 80px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #card, #nav button, #tools button, #chips button { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Split: all clips, a whole speaker held out for test, train and validation, standardization"></canvas>
+
+<div class="hud tl" id="hud">
+  <a class="back" href="../#how">← all blocks</a> <a class="back" href="../05-mfcc/">← Previous: MFCC</a>
+  <div class="kicker">Block 6 of 12</div>
+  <h1>Split</h1>
+  <div class="sub">notebook cells 5–6 · tap to choose the test speaker</div>
+</div>
+
+<div id="cap" aria-live="polite"></div>
+<div id="chips" role="group" aria-label="Held-out speaker"></div>
+<div id="tools">
+  <button id="mode" type="button" aria-pressed="false">Random split instead</button>
+  <button id="strat" type="button" aria-pressed="true" hidden>stratify: ON</button>
+  <button id="replay" type="button" hidden>Replay</button>
+</div>
+<nav id="nav" aria-label="Steps">
+  <button id="prev" type="button" aria-label="Previous step">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next step">→</button>
+  <a id="onward" href="../07-model/" hidden>Next block: Model →</a>
+</nav>
+<div id="card" role="status" aria-live="polite"></div>
+
+<script src="../_shared/theme.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* Numbers from the notebook go here. The clips below are synthetic (a seeded generator):
+   they only show how the split works. */
+const N_CLIPS = 72;
+const SPEAKERS = ['anna', 'bob', 'carl'];
+const CLASSES = ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
+const TEST_SIZE = 0.15;     // share of clips for test in the random split
+const VAL_SIZE = 0.15;      // share of trainval for val
+const LETTERS = CLASSES.map(c => c[0]);
+const TILE_W = 22, TILE_N = 18, GAP = 4, PADZ = 10, TITLEH = 24;
+
+const CAPTIONS = [
+  'Every row of the table df is one clip.',
+  'The test set is one whole person the model never hears.',
+  'val is cut from the same speakers as train, so it is easier than test. It only decides when to stop training.',
+  'mean and std come from train only. val and test use the same numbers, so nothing leaks from test into training.',
+];
+const CAP_RANDOM = 'Same voice in train and test: the model can learn the voice, not the word.';
+const NOTE_STRAT = 'stratify keeps the class proportions in both parts.';
+
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mix = (a, b, t) => a + (b - a) * t;
+const ease = u => 1 - Math.pow(1 - u, 3);
+
+/* ---------- synthetic clips: a speaker, a class and one feature value ---------- */
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const rng = makeRng(2026);
+const gauss = () => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(6.283185 * rng());
+const pickW = w => { let r = rng() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; } return w.length - 1; };
+const SPK_WEIGHT = [.36, .34, .30], SPK_OFFSET = [3.4, 5.0, 3.9], CLS_OFFSET = [0, .3, -.3, .2, -.4, .1];
+const CLS_WEIGHT = { bob: [1, 1, 1, 0, 1, 1], carl: [1, 0, 1, 1, 1, 1] };   // bob never says "focus", carl never says "elly"
+const CLIPS = Array.from({ length: N_CLIPS }, (_, id) => {
+  const s = pickW(SPEAKERS.map((_, i) => SPK_WEIGHT[i] || 1)), c = pickW(CLS_WEIGHT[SPEAKERS[s]] || CLASSES.map(() => 1));
+  return { id, s, c, feat: (SPK_OFFSET[s] || 4) + CLS_OFFSET[c] + gauss() * 1.3 };
+});
+const shuffled = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+const ORDER = shuffled(CLIPS.map(c => c.id));   // one fixed random order, so toggling does not reshuffle everything
+
+const TEST_N = Math.ceil(TEST_SIZE * N_CLIPS);
+const RANDOM_TEST = (() => {   // a few clips of every speaker, so the same voice is on both sides
+  const chosen = new Set();
+  SPEAKERS.forEach((_, s) => ORDER.filter(id => CLIPS[id].s === s).slice(0, 2).forEach(id => chosen.add(id)));
+  ORDER.forEach(id => { if (chosen.size < TEST_N) chosen.add(id); });
+  return chosen;
+})();
+
+/* ---------- the split: state -> a zone for every clip ---------- */
+const S = { mode: 'speaker', held: Math.max(0, SPEAKERS.indexOf('bob')), strat: true };
+let SP = null;
+
+function computeSplit() {
+  const zone = CLIPS.map(() => 'train');
+  CLIPS.forEach(c => { if (S.mode === 'speaker' ? c.s === S.held : RANDOM_TEST.has(c.id)) zone[c.id] = 'test'; });
+  const tv = CLIPS.filter(c => zone[c.id] !== 'test'), nVal = Math.max(1, Math.ceil(VAL_SIZE * tv.length));
+  const val = new Set();
+  if (S.strat) {   // proportional share per class; every class with 2+ clips keeps at least one in val
+    const cnt = CLASSES.map((_, c) => tv.filter(x => x.c === c).length), q = cnt.map(n => nVal * n / tv.length);
+    const al = q.map((v, c) => cnt[c] >= 2 ? Math.max(1, Math.floor(v)) : Math.floor(v));
+    let sum = al.reduce((a, b) => a + b, 0);
+    while (sum < nVal) { let b = -1; q.forEach((v, c) => { if (al[c] < cnt[c] && (b < 0 || v - al[c] > q[b] - al[b])) b = c; }); if (b < 0) break; al[b]++; sum++; }
+    while (sum > nVal) { let b = -1; q.forEach((v, c) => { if (al[c] > 1 && (b < 0 || v - al[c] < q[b] - al[b])) b = c; }); if (b < 0) break; al[b]--; sum--; }
+    CLASSES.forEach((_, c) => ORDER.filter(id => CLIPS[id].c === c && zone[id] !== 'test').slice(0, al[c]).forEach(id => val.add(id)));
+  } else {
+    // plain random cut; the first draw that leaves a class out of val is used, so the effect is visible
+    const pool = ORDER.filter(id => zone[id] !== 'test');
+    let cut = pool.slice(0, nVal);
+    for (let k = 0; k + nVal <= pool.length; k++) {
+      const cand = pool.slice(k, k + nVal);
+      if (CLASSES.some((_, c) => tv.some(x => x.c === c) && !cand.some(id => CLIPS[id].c === c))) { cut = cand; break; }
+    }
+    cut.forEach(id => val.add(id));
+  }
+  val.forEach(id => { zone[id] = 'val'; });
+  const n = { train: 0, val: 0, test: 0 }, cc = { train: CLASSES.map(() => 0), val: CLASSES.map(() => 0), test: CLASSES.map(() => 0) };
+  CLIPS.forEach(c => { n[zone[c.id]]++; cc[zone[c.id]][c.c]++; });
+  const tvCount = CLASSES.map((_, c) => cc.train[c] + cc.val[c]);
+  const missingVal = CLASSES.map((_, c) => c).filter(c => tvCount[c] > 0 && cc.val[c] === 0);
+  const missingTest = CLASSES.map((_, c) => c).filter(c => cc.test[c] === 0);
+  return { zone, n, cc, tvCount, missingVal, missingTest };
+}
+// the biggest number of tiles a zone can ever hold, so zones keep their size when the choice changes
+const WORST = (() => {
+  const w = { tv: 0, train: 0, val: 0, test: 0 };
+  [...SPEAKERS.map((_, s) => CLIPS.filter(c => c.s === s).length), TEST_N].forEach(t => {
+    const tv = N_CLIPS - t, v = Math.ceil(VAL_SIZE * tv);
+    w.tv = Math.max(w.tv, tv); w.train = Math.max(w.train, tv - v); w.val = Math.max(w.val, v); w.test = Math.max(w.test, t);
+  });
+  return w;
+})();
+
+const f2 = v => (Math.abs(v) < .005 ? 0 : v).toFixed(2);
+const statsOf = v => { const m = v.reduce((a, b) => a + b, 0) / (v.length || 1); return { mean: m, std: Math.sqrt(v.reduce((a, b) => a + (b - m) * (b - m), 0) / (v.length || 1)) || 1 }; };
+const trainStats = () => statsOf(CLIPS.filter(c => SP.zone[c.id] === 'train').map(c => c.feat));   // train only, like the notebook
+
+/* ---------- setup ---------- */
+const cv = $('c'), ctx = cv.getContext('2d');
+const card = $('card'), hudEl = $('hud'), capEl = $('cap'), toolsEl = $('tools'), chipsEl = $('chips');
+const prevBtn = $('prev'), nextBtn = $('next'), modeBtn = $('mode'), stratBtn = $('strat'), replayBtn = $('replay'), onwardEl = $('onward');
+const dots = [...document.querySelectorAll('#dots i')];
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MONO = THEME.mono;
+const SPK_COL = [THEME.neon, THEME.ink, THEME.gray], SPK_VAR = ['--neon', '--ink', '--gray'];
+const spkCol = s => SPK_COL[s % SPK_COL.length];
+
+let W = 0, H = 0, DPR = 0, narrow = false, fs = 14.5, TILE = TILE_W, step = 0, stepT0 = 0, now = 0, sel = null;
+const L = {};
+const A = [1, 0, 0, 0];
+
+const TILES = CLIPS.map((c, i) => ({ c, i, x: 0, y: 0, fx: 0, fy: 0, tx: 0, ty: 0, a: 1, fa: 1, ta: 1, t0: 0, dur: 0, cx: 0, cy: 0, ph: rng() * 6.28 }));
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function T(t, x, y, col, size, align = 'left', a = 1, weight = 400) {
+  ctx.globalAlpha = a; ctx.fillStyle = col; ctx.font = `${weight} ${size}px ${MONO}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.fillText(t, x, y); ctx.globalAlpha = 1;
+}
+function fitSize(t, maxW, size) { ctx.font = `${size}px ${MONO}`; const w = ctx.measureText(t).width; return w > maxW ? Math.max(9, size * maxW / w) : size; }
+function fitCode(t, x, cy, maxW, col, a) {
+  const sz = fitSize(t, maxW - 16, fs - 1); ctx.font = `${sz}px ${MONO}`; const w = Math.min(maxW, ctx.measureText(t).width + 16);
+  ctx.globalAlpha = a; rr(x, cy - 11, w, 22, 6); ctx.fillStyle = THEME.codeBg; ctx.fill(); ctx.globalAlpha = 1;
+  T(t, x + 8, cy, col, sz, 'left', a);
+}
+const note = (x, y, align, a) => T('illustrative data', x, y, THEME.muted, Math.max(10, fs * .78), align, a);
+
+/* ---------- layout ---------- */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (innerWidth === W && innerHeight === H && dpr === DPR) return;
+  W = innerWidth; H = innerHeight; DPR = dpr;
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+const colsOf = w => Math.max(1, Math.floor((w - 2 * PADZ + GAP) / (TILE + GAP)));
+const needH = (k, w) => TITLEH + Math.max(1, Math.ceil(WORST[k] / colsOf(w))) * (TILE + GAP) - GAP + PADZ;
+// zones side by side on a wide screen, stacked on a narrow one: {key: {x, y, w, h, cols}}, and the bottom edge
+function zonesAt(keys, fr, y) {
+  const gap = narrow ? 8 : 24, out = {}; let bottom = y;
+  if (narrow) {
+    keys.forEach(k => { const h = needH(k, L.cw); out[k] = { x: L.x0, y: bottom, w: L.cw, h, cols: colsOf(L.cw) }; bottom += h + gap; });
+    bottom -= gap;
+  } else {
+    const avail = L.cw - gap * (keys.length - 1); let x = L.x0, h = 0;
+    keys.forEach((k, i) => { h = Math.max(h, needH(k, avail * fr[i]), 150); });
+    keys.forEach((k, i) => { const w = avail * fr[i]; out[k] = { x, y, w, h, cols: colsOf(w) }; x += w + gap; });
+    bottom = y + h;
+  }
+  return { z: out, bottom };
+}
+function layout() {
+  resize();
+  narrow = W < 700; fs = narrow ? 12.5 : 14.5; TILE = narrow ? TILE_N : TILE_W;
+  const hudB = hudEl.getBoundingClientRect().bottom, capTop = capEl.getBoundingClientRect().top;
+  toolsEl.style.bottom = (H - capTop + 8) + 'px';
+  const pad = narrow ? 16 : 32, cw = Math.min(W - 2 * pad, 1100), x0 = (W - cw) / 2, y0 = hudB + 10;
+  const y1 = capTop - 8 - 38 - 8, ln = narrow ? 18 : 22;
+  Object.assign(L, { pad, cw, x0, y0, y1, ln, capTop });
+  // step 1: the cloud (and a legend to its left on a wide screen)
+  const lg = narrow ? 3 * 22 + 8 : 0, cl = { x0: narrow ? x0 : x0 + 250, x1: x0 + cw, y0: y0 + lg, y1: capTop - 12 };
+  cl.cx = (cl.x0 + cl.x1) / 2; cl.cy = (cl.y0 + cl.y1) / 2; cl.rx = Math.max(60, (cl.x1 - cl.x0) / 2 - TILE); cl.ry = Math.max(60, Math.min((cl.y1 - cl.y0) / 2 - TILE, 230));
+  L.cloud = cl;
+  // step 2: chips, two code lines, zones, counters
+  const top1 = y0 + (narrow ? 4 : 0);
+  L.g1 = { codeY: top1 + 46 }; const z1 = zonesAt(['tv', 'test'], [.64, .36], top1 + 46 + 2 * ln + 10);
+  L.g1.zones = z1.z; L.g1.cy = z1.bottom + 16;
+  chipsEl.style.top = top1 + 'px';
+  // step 3: code line, zones, bars, note, print line
+  L.g2 = { codeY: y0 }; const z2 = zonesAt(['train', 'val', 'test'], [.5, .2, .3], y0 + ln + 8);
+  L.g2.zones = z2.z; L.g2.barsLabelY = z2.bottom + 14; L.g2.barH = narrow ? 30 : 40; L.g2.barsY = L.g2.barsLabelY + 8;
+  L.g2.noteY = L.g2.barsY + L.g2.barH + 32; L.g2.printY = L.g2.noteY + 16;
+}
+
+/* ---------- where every tile goes ---------- */
+const zoneKey = t => step === 1 ? (SP.zone[t.c.id] === 'test' ? 'test' : 'tv') : SP.zone[t.c.id];
+function targets() {
+  const zs = step === 1 ? L.g1.zones : step === 2 ? L.g2.zones : null;
+  TILES.forEach(t => { t.tz = null; });
+  if (!zs) return;
+  Object.keys(zs).forEach(k => {
+    const z = zs[k], list = TILES.filter(t => zoneKey(t) === k).sort((a, b) => a.c.s - b.c.s || a.c.c - b.c.c || a.c.id - b.c.id);
+    list.forEach((t, i) => { t.tz = k; t.sx = z.x + PADZ + TILE / 2 + (i % z.cols) * (TILE + GAP); t.sy = z.y + TITLEH + TILE / 2 + Math.floor(i / z.cols) * (TILE + GAP); });
+  });
+}
+function initCloud() {
+  const c = L.cloud;
+  TILES.forEach((t, i) => {
+    const r = Math.sqrt((i + .5) / TILES.length), an = i * 2.39996;
+    t.cx = c.cx + Math.cos(an) * r * c.rx; t.cy = c.cy + Math.sin(an) * r * c.ry;
+  });
+}
+function arrange(instant) {
+  targets();
+  TILES.forEach((t, i) => {
+    const cx = t.cx, cy = t.cy;
+    const tx = step === 0 ? cx : (step === 3 ? cx : t.sx), ty = step === 0 ? cy : (step === 3 ? cy : t.sy);
+    t.fx = t.x; t.fy = t.y; t.fa = t.a; t.tx = tx; t.ty = ty; t.ta = step === 3 ? 0 : 1;
+    t.dur = instant || reduce ? 0 : 520; t.t0 = performance.now() + (instant || reduce ? 0 : (i * 37 % 72) * 7);
+  });
+}
+
+/* ---------- drawing ---------- */
+function drawTile(t, hl, dim) {
+  if (t.a < .02) return;
+  const x = t.x - TILE / 2, y = t.y - TILE / 2, col = spkCol(t.c.s), test = t.tz === 'test' || t.tz === 'tv' && false;
+  ctx.globalAlpha = t.a * dim; rr(x, y, TILE, TILE, 4);
+  ctx.fillStyle = hl ? col : THEME.a('bgGlow', .92); ctx.fill();
+  ctx.lineWidth = hl ? 2.4 : 1.8; ctx.strokeStyle = col; ctx.stroke();
+  ctx.globalAlpha = 1;
+  T(LETTERS[t.c.c], t.x, t.y + 1, hl ? THEME.onNeon : THEME.ink, TILE * .56, 'center', t.a * dim, 700);
+}
+function drawZone(z, title, col, a, strong) {
+  ctx.globalAlpha = a; rr(z.x, z.y, z.w, z.h, 10); ctx.fillStyle = THEME.a('bgGlow', .35); ctx.fill();
+  ctx.lineWidth = strong ? 1.8 : 1.1; ctx.strokeStyle = col; ctx.stroke(); ctx.globalAlpha = 1;
+  T(title, z.x + 10, z.y + 13, strong ? col : THEME.ink, Math.max(11, fs * .9), 'left', a, 700);
+}
+function drawLegend(a) {
+  const y0 = L.y0 + 6, sm = Math.max(11, fs * .9);
+  if (!narrow) {
+    T('speaker', L.x0, y0, THEME.muted, sm, 'left', a);
+    SPEAKERS.forEach((s, i) => { const y = y0 + 26 + i * 26; rr(L.x0, y - 9, 18, 18, 4); ctx.globalAlpha = a; ctx.strokeStyle = spkCol(i); ctx.lineWidth = 1.8; ctx.stroke(); ctx.globalAlpha = 1; T(s, L.x0 + 28, y, THEME.ink, fs, 'left', a); });
+    T('class (letter inside)', L.x0, y0 + 126, THEME.muted, sm, 'left', a);
+    CLASSES.forEach((c, i) => T(`${LETTERS[i]}  ${c}`, L.x0, y0 + 152 + i * 22, THEME.ink, fs, 'left', a));
+    note(L.x0, y0 + 152 + 6 * 22 + 6, 'left', a);
+  } else {
+    SPEAKERS.forEach((s, i) => { const x = L.x0 + i * (L.cw / 3); rr(x, y0 - 8, 16, 16, 4); ctx.globalAlpha = a; ctx.strokeStyle = spkCol(i); ctx.lineWidth = 1.8; ctx.stroke(); ctx.globalAlpha = 1; T(s, x + 24, y0, THEME.ink, fs, 'left', a); });
+    CLASSES.forEach((c, i) => T(`${LETTERS[i]} ${c}`, L.x0 + (i % 3) * (L.cw / 3), y0 + 26 + Math.floor(i / 3) * 20, THEME.muted, Math.max(10.5, fs - 1.5), 'left', a));
+    note(L.x0 + L.cw, y0 + 26 + 20 + 22, 'right', a);
+  }
+}
+function classLine(arr, a, y, x, maxW) {
+  const t = 'test per class: ' + CLASSES.map((_, c) => `${LETTERS[c]} ${arr[c]}`).join(' · '), sz = fitSize(t, maxW, fs - 1);
+  T(t, x, y, THEME.ink, sz, 'left', a);
+}
+function drawS1(a) {
+  const g = L.g1, z = g.zones, ln = L.ln, held = SPEAKERS[S.held];
+  drawZone(z.tv, `trainval · ${SP.n.train + SP.n.val}`, THEME.gray, a, false);
+  drawZone(z.test, `test · ${SP.n.test}`, THEME.neon, a, true);
+  fitCode(S.mode === 'speaker' ? `HELD_OUT_SPEAKER = "${held}"` : 'test_mask = random 15% of the clips', L.x0, g.codeY + ln / 2, L.cw, THEME.codeInk, a);
+  fitCode(S.mode === 'speaker' ? 'test_mask = df.speaker == HELD_OUT_SPEAKER' : '# the same voice lands on both sides', L.x0, g.codeY + ln * 1.5 + 4, L.cw, THEME.codeInk, a);
+  const cx = narrow ? L.x0 : z.test.x, cw = narrow ? L.cw : z.test.w;
+  classLine(SP.cc.test, a, g.cy + 6, cx, cw);
+  const miss = SP.missingTest;
+  if (miss.length) T(`! no clips of class ${miss.map(c => LETTERS[c]).join(', ')} in test`, cx, g.cy + 6 + ln, THEME.neon, fitSize('! no clips of class x in test', cw, fs - 1), 'left', a, 700);
+  if (narrow) note(L.x0 + L.cw, g.cy + 6 + 2 * ln, 'right', a * .9); else note(L.x0, g.cy + 6, 'left', a * .9);
+  if (S.mode === 'random') {   // thin lines between the tiles of one voice on both sides
+    ctx.save(); ctx.globalAlpha = a * .6; ctx.strokeStyle = THEME.gray; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    SPEAKERS.forEach((_, s) => {
+      const te = TILES.filter(t => t.c.s === s && t.tz === 'test').slice(0, 2), tr = TILES.filter(t => t.c.s === s && t.tz === 'tv').slice(0, 2);
+      te.forEach((b, i) => { const x = tr[i]; if (!x) return; ctx.beginPath(); ctx.moveTo(x.x, x.y); ctx.lineTo(b.x, b.y); ctx.stroke(); });
+    });
+    ctx.restore();
+    T('same voice', z.tv.x + z.tv.w - 10, z.tv.y + 13, THEME.gray, Math.max(10.5, fs * .85), 'right', a);
+  }
+}
+function drawBars(a) {
+  const g = L.g2, keys = ['train', 'val', 'test'], sm = Math.max(10, fs * .8), gp = narrow ? 10 : 30, gw = (L.cw - 2 * gp) / 3;
+  const frac = keys.map(k => SP.cc[k].map(n => n / Math.max(1, SP.n[k]))), mx = Math.max(.2, ...frac.flat()), base = g.barsY + g.barH;
+  keys.forEach((k, ki) => {
+    const gx = L.x0 + ki * (gw + gp), bw = Math.min(26, (gw - 5 * 4) / 6), st = (gw - bw) / 5;
+    T(narrow ? k : `${k} · share of each class`, gx, g.barsLabelY, THEME.muted, sm, 'left', a);
+    ctx.globalAlpha = a * .5; ctx.strokeStyle = THEME.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(gx, base); ctx.lineTo(gx + gw, base); ctx.stroke(); ctx.globalAlpha = 1;
+    CLASSES.forEach((_, c) => {
+      const x = gx + c * st, h = frac[ki][c] / mx * (g.barH - 4), miss = k === 'val' && SP.tvCount[c] > 0 && SP.cc.val[c] === 0;
+      if (miss) {
+        ctx.save(); ctx.globalAlpha = a; rr(x - 1, base - g.barH + 4, bw + 2, g.barH - 4, 3); ctx.strokeStyle = THEME.neon; ctx.lineWidth = 1.4; ctx.setLineDash([3, 2]); ctx.stroke(); ctx.restore();
+        T('!', x + bw / 2, base - g.barH / 2 - 2, THEME.neon, sm + 2, 'center', a, 700);
+      } else if (h > 0) { ctx.globalAlpha = a; rr(x, base - h, bw, h, 2); ctx.fillStyle = THEME.a('link', .75); ctx.fill(); ctx.globalAlpha = 1; }
+      T(LETTERS[c], x + bw / 2, base + 9, miss ? THEME.neon : THEME.muted, sm, 'center', a, miss ? 700 : 400);
+    });
+  });
+}
+function drawS2(a) {
+  const g = L.g2, z = g.zones, ln = L.ln, sm = Math.max(10.5, fs * .84);
+  drawZone(z.train, `train · ${SP.n.train}`, THEME.gray, a, false); drawZone(z.val, `val · ${SP.n.val}`, THEME.link, a, false); drawZone(z.test, `test · ${SP.n.test}`, THEME.neon, a, true);
+  fitCode(`train_test_split(trainval, test_size=${VAL_SIZE}${S.strat ? ', stratify=y' : ''})`, L.x0, g.codeY + ln / 2, L.cw, THEME.codeInk, a);
+  drawBars(a);
+  const warn = SP.missingVal.length;
+  T(NOTE_STRAT, L.x0 + L.cw / 2, g.noteY, S.strat ? THEME.ink : THEME.muted, fitSize(NOTE_STRAT, L.cw, sm + 1), 'center', a);
+  if (warn) T(`! no clips of class ${SP.missingVal.map(c => LETTERS[c]).join(', ')} in val`, L.x0 + L.cw / 2, g.noteY + 16, THEME.neon, fitSize('! no clips of class x in val', L.cw, sm + 1), 'center', a, 700);
+  const py = g.noteY + (warn ? 40 : 26);
+  fitCode('print(len(X_train), len(X_val), len(X_test))', L.x0, py, L.cw, THEME.codeInk, a);
+  T(`${SP.n.train} ${SP.n.val} ${SP.n.test}`, L.x0 + 4, py + ln, THEME.ink, fs + 1, 'left', a, 700);
+  note(L.x0 + L.cw, py + ln, 'right', a * .9);
+}
+
+// step 4: one feature as three histograms; train is standardized first, then val and test with the same numbers
+const BIN = .5, HIST = { train: {}, val: {}, test: {} };
+function histData() {
+  const ts = trainStats(); L.ts = ts;
+  const all = CLIPS.map(c => c.feat), lo = Math.floor(Math.min(...all, -3.5) / BIN) * BIN - BIN, hi = Math.ceil(Math.max(...all, 3.5) / BIN) * BIN + BIN;
+  L.lo = lo; L.hi = hi; const nb = Math.round((hi - lo) / BIN); let peak = 0;
+  ['train', 'val', 'test'].forEach(k => {
+    const v = CLIPS.filter(c => SP.zone[c.id] === k).map(c => c.feat), bins = new Array(nb).fill(0);
+    v.forEach(x => { bins[clamp(Math.floor((x - lo) / BIN), 0, nb - 1)]++; });
+    HIST[k].raw = v; HIST[k].d = bins.map(n => n / (Math.max(1, v.length) * BIN)); peak = Math.max(peak, ...HIST[k].d);
+  });
+  L.ymax = peak * ts.std * 1.12;
+}
+function drawS3(a) {
+  const x0 = L.x0 + 4, w = L.cw - 8, sm = Math.max(10, fs * .8), keys = ['train', 'val', 'test'], ts = L.ts;
+  const top = L.y0 + 24, hh = (L.y1 - 20 - top) / 3;
+  const el = reduce ? 1e9 : now - stepT0;
+  const tTrain = ease(clamp((el - 1500) / 1100, 0, 1)), tOther = ease(clamp((el - 3100) / 1100, 0, 1)), tStat = ease(clamp((el - 300) / 800, 0, 1));
+  const px = u => x0 + (u - L.lo) / (L.hi - L.lo) * w;
+  T(`z = (x − ${f2(ts.mean)}) / ${f2(ts.std)}`, x0, L.y0 + 8, THEME.codeInk, fitSize('z = (x − 0.00) / 0.00', L.cw * .55, fs + 1), 'left', a * tStat);
+  T('numbers from train only', x0 + w, L.y0 + 8, THEME.muted, sm, 'right', a * tStat);
+  keys.forEach((k, i) => {
+    const rt = top + i * hh, plotTop = rt + 20, base = rt + hh - 16, ph = base - plotTop, t = i === 0 ? tTrain : tOther;
+    ctx.globalAlpha = a; rr(x0 - 4, rt + 2, w + 8, hh - 4, 10); ctx.fillStyle = THEME.a('bgGlow', .4); ctx.fill();
+    ctx.strokeStyle = k === 'test' ? THEME.neon : k === 'val' ? THEME.link : THEME.gray; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalAlpha = 1;
+    T(`${k} · ${HIST[k].raw.length}`, x0 + 6, rt + 12, k === 'test' ? THEME.neon : THEME.ink, sm + 1, 'left', a, 700);
+    const own = statsOf(HIST[k].raw.map(x => (x - ts.mean) / ts.std)), raw = statsOf(HIST[k].raw), st = t > .5 ? own : raw;
+    T(`mean ${f2(st.mean)} · std ${f2(st.std)}`, x0 + w - 6, rt + 12, t > .5 ? THEME.link : THEME.gray, sm, 'right', a);
+    ctx.globalAlpha = a * .5; ctx.strokeStyle = THEME.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, base); ctx.lineTo(x0 + w, base); ctx.stroke();
+    ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(px(0), plotTop - 2); ctx.lineTo(px(0), base); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    for (let u = Math.ceil((L.lo + .6) / 2) * 2; u <= L.hi - .6; u += 2) T(String(u), px(u), base + 8, THEME.muted, sm - 1, 'center', a);
+    const f = u => mix(u, (u - ts.mean) / ts.std, t), hf = mix(1, ts.std, t);
+    HIST[k].d.forEach((v, b) => {
+      if (v <= 0) return;
+      const ua = L.lo + b * BIN, xa = px(f(ua)), xb = px(f(ua + BIN)), h = v * hf / L.ymax * (ph - 4), bw = Math.max(1, xb - xa - 1);
+      ctx.globalAlpha = a * (1 - t) * .75; ctx.fillStyle = THEME.gray; ctx.fillRect(xa, base - h, bw, h);
+      ctx.globalAlpha = a * t * .8; ctx.fillStyle = THEME.link; ctx.fillRect(xa, base - h, bw, h);
+    });
+    ctx.globalAlpha = 1;
+    // the same mean and spread of train, drawn on every row
+    const mu = mix(ts.mean, 0, t), sd = mix(ts.std, 1, t), s = (i === 0 ? tStat : tStat * .85);
+    ctx.save(); ctx.globalAlpha = a * s * .14; ctx.fillStyle = THEME.neon; ctx.fillRect(px(mu - sd), plotTop, px(mu + sd) - px(mu - sd), ph); ctx.restore();
+    ctx.save(); ctx.globalAlpha = a * s; ctx.strokeStyle = THEME.neon; ctx.lineWidth = 1.6; ctx.setLineDash(i === 0 ? [] : [5, 3]);
+    ctx.beginPath(); ctx.moveTo(px(mu), plotTop - 2); ctx.lineTo(px(mu), base); ctx.stroke(); ctx.restore();
+    if (i === 0) T('mean ± std', px(mu + sd) + 6, plotTop + 6, THEME.neon, sm, 'left', a * s);
+    note(x0 + w - 6, rt + 28, 'right', a * .8);
+  });
+  const na = a * tTrain, fy = L.y1 - 6;
+  if (na > .01) {
+    const txt = ' keeps mean and std for the board', fz = fitSize('norm.npz' + txt, L.cw, sm + 1);
+    ctx.font = `700 ${fz}px ${MONO}`; const wn = ctx.measureText('norm.npz').width; ctx.font = `${fz}px ${MONO}`; const wt = ctx.measureText(txt).width;
+    const x = L.x0 + L.cw / 2 - (wn + 10 + wt) / 2;
+    ctx.save(); ctx.globalAlpha = na; rr(x - 5, fy - 11, wn + 10, 22, 6); ctx.fillStyle = THEME.a('neon', .12); ctx.fill(); ctx.strokeStyle = THEME.neon; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+    T('norm.npz', x, fy, THEME.neon, fz, 'left', na, 700); T(txt, x + wn + 10, fy, THEME.ink, fz, 'left', na);
+  }
+}
+
+/* ---------- card for a tapped / hovered tile ---------- */
+const pointer = { x: 0, y: 0, type: 'mouse', inside: false };
+function pick() {
+  let best = null, bd = (TILE / 2 + 5) ** 2;
+  TILES.forEach(t => { if (t.a < .5) return; const d = (t.x - pointer.x) ** 2 + (t.y - pointer.y) ** 2; if (d < bd) { bd = d; best = t; } });
+  return best;
+}
+function showCard(t) {
+  if (!t) { card.classList.remove('on'); return; }
+  const c = t.c, z = step === 0 ? 'not split yet' : zoneKey(t);
+  card.className = 'on' + (c.s === 1 ? ' quiet' : ''); card.style.left = clamp(t.x + 24, 12, W - 380) + 'px'; card.style.top = clamp(t.y - 10, L.y0, H - 260) + 'px';
+  card.innerHTML = `<span class="tag">${SPEAKERS[c.s]}</span><h2>${CLASSES[c.c]}</h2><code>df.iloc[${c.id}]</code><p>Clip ${c.id}: spoken by ${SPEAKERS[c.s]}, class “${CLASSES[c.c]}”. Where it goes: ${z}.</p>`;
+}
+
+/* ---------- loop ---------- */
+let last = 0;
+function frame(ts) {
+  const t = ts / 1000, dt = Math.min(.05, last ? t - last : .016); last = t; now = performance.now();
+  const k = reduce ? 1 : Math.min(1, dt * 7);
+  for (let i = 0; i < 4; i++) A[i] += ((i === step ? 1 : 0) - A[i]) * k;
+  TILES.forEach(tl => {
+    const u = tl.dur === 0 ? 1 : clamp((now - tl.t0) / tl.dur, 0, 1), e = ease(u);
+    let tx = tl.tx, ty = tl.ty;
+    if (step === 0 && !reduce) { tx += Math.sin(t * .7 + tl.ph) * 6; ty += Math.cos(t * .6 + tl.ph * 1.3) * 6; }
+    tl.x = mix(tl.fx, tx, e); tl.y = mix(tl.fy, ty, e); tl.a = mix(tl.fa, tl.ta, e);
+  });
+  const hov = pointer.type === 'mouse' ? (pointer.inside ? pick() : null) : sel;
+  ctx.clearRect(0, 0, W, H);
+  if (A[0] > .01) drawLegend(A[0]);
+  if (A[1] > .01) drawS1(A[1]);
+  if (A[2] > .01) drawS2(A[2]);
+  if (A[3] > .01) drawS3(A[3]);
+  TILES.forEach(tl => drawTile(tl, tl === hov, hov && tl !== hov ? .45 : 1));
+  cv.style.cursor = hov ? 'pointer' : 'default';
+  showCard(hov);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- controls ---------- */
+function syncUI() {
+  dots.forEach((d, i) => d.classList.toggle('on', i === step));
+  prevBtn.disabled = step === 0; nextBtn.hidden = step === 3; onwardEl.hidden = step !== 3;
+  capEl.textContent = step === 1 && S.mode === 'random' ? CAP_RANDOM : CAPTIONS[step];
+  chipsEl.classList.toggle('on', step === 1);
+  toolsEl.classList.toggle('on', step === 1 || step === 2 || step === 3);
+  modeBtn.hidden = step !== 1; stratBtn.hidden = step !== 2; replayBtn.hidden = step !== 3;
+  modeBtn.textContent = S.mode === 'speaker' ? 'Random split instead' : 'Held-out speaker instead';
+  modeBtn.setAttribute('aria-pressed', String(S.mode === 'random'));
+  stratBtn.textContent = `stratify: ${S.strat ? 'ON' : 'OFF'}`; stratBtn.setAttribute('aria-pressed', String(S.strat));
+  chipsEl.querySelectorAll('button').forEach((b, i) => { b.setAttribute('aria-pressed', String(S.mode === 'speaker' && i === S.held)); b.disabled = S.mode === 'random'; b.style.opacity = S.mode === 'random' ? .4 : 1; });
+}
+function go(n) {
+  n = clamp(n, 0, 3); if (n === step) return;
+  step = n; stepT0 = performance.now(); sel = null; syncUI(); layout(); arrange(false);
+}
+function recompute() { SP = computeSplit(); syncUI(); layout(); histData(); arrange(false); }
+SPEAKERS.forEach((s, i) => {
+  const b = document.createElement('button'); b.type = 'button'; b.style.setProperty('--c', `var(${SPK_VAR[i % 3]})`);
+  b.innerHTML = `<i></i>${s}`; b.addEventListener('click', () => { S.mode = 'speaker'; S.held = i; recompute(); }); chipsEl.appendChild(b);
+});
+modeBtn.addEventListener('click', () => { S.mode = S.mode === 'speaker' ? 'random' : 'speaker'; recompute(); });
+stratBtn.addEventListener('click', () => { S.strat = !S.strat; recompute(); });
+replayBtn.addEventListener('click', () => { stepT0 = performance.now(); });
+prevBtn.addEventListener('click', () => go(step - 1)); nextBtn.addEventListener('click', () => go(step + 1));
+addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(step + 1); else if (e.key === 'ArrowLeft') go(step - 1); });
+cv.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.type = e.pointerType; pointer.inside = true; });
+cv.addEventListener('pointerleave', () => { pointer.inside = false; });
+cv.addEventListener('pointerdown', e => {
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.type = e.pointerType;
+  if (e.pointerType !== 'mouse') { const t = pick(); sel = t && t !== sel ? t : null; }
+});
+let cloudReady = false;
+function relayout() { layout(); if (!cloudReady) { initCloud(); cloudReady = true; TILES.forEach(t => { t.x = t.fx = t.cx; t.y = t.fy = t.cy; }); } else initCloud(); histData(); arrange(true); }
+addEventListener('resize', () => { relayout(); });
+SP = computeSplit(); syncUI(); relayout();
+requestAnimationFrame(frame);
+
+window.__exs6 = {
+  step: () => step, state: () => ({ mode: S.mode, held: S.held, strat: S.strat }), layout: () => L,
+  split: () => ({ n: SP.n, cc: SP.cc, missingVal: SP.missingVal, missingTest: SP.missingTest }),
+  stats: () => { const ts = trainStats(); const z = k => statsOf(CLIPS.filter(c => SP.zone[c.id] === k).map(c => (c.feat - ts.mean) / ts.std)); return { ts, train: z('train'), val: z('val'), test: z('test') }; },
+  tiles: () => TILES.map(t => ({ id: t.c.id, x: t.x, y: t.y, a: t.a, z: t.tz })),
+};
+})();
+</script>
+</body>
+</html>
