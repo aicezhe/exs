@@ -9,7 +9,7 @@ window.EXS_BLOCKS = [
   { n: 6,  title: 'Split',        sub: 'Train, validation, test',   href: './06-split/',   ready: true },
   { n: 7,  title: 'Model',        sub: 'A small CNN',               href: './07-model/',   ready: true },
   { n: 8,  title: 'Training',     sub: 'Learning from examples',    href: './08-training/', ready: true },
-  { n: 9,  title: 'Evaluation',   sub: 'Accuracy and errors',       href: null,            ready: false },
+  { n: 9,  title: 'Evaluation',   sub: 'Accuracy and errors',       href: './09-evaluation/', ready: true },
   { n: 10, title: 'Quantization', sub: 'Shrink to int8',            href: null,            ready: false },
   { n: 11, title: 'Deployment',   sub: 'Board to laptop',           href: null,            ready: false },
   { n: 12, title: 'Experiments',  sub: 'What moves the accuracy',   href: null,            ready: false },

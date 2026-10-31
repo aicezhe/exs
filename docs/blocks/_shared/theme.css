@@ -8,6 +8,7 @@
   --dim:#4d594e;
   --neon:#39ff14;        /* labels, classes, selected, active, buttons, accents */
   --link:#22c55e;        /* lines, links, processed data */
+  --err:#ff6b6b;         /* errors only: wrongly classified clips and off-diagonal confusion cells */
   --gray:#a3ada4;        /* raw data, settings, secondary */
   --panel:rgba(6,10,6,.94);
   --panel-border:rgba(57,255,20,.7);

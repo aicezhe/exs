@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block 9 · Evaluation</title>
+<link rel="stylesheet" href="../_shared/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--body); }
+  body { background: var(--page-bg); }
+  button { font: inherit; color: inherit; }
+
+  .hud { position: fixed; z-index: 2; top: 28px; left: 32px; right: 32px; pointer-events: none; }
+  .back { display: inline-block; margin: 0 0 10px; padding: 8px 14px; border: 1px solid var(--neon); border-radius: 999px; color: var(--ink);
+    font-size: 14px; text-decoration: none; pointer-events: auto; transition: box-shadow .2s, background .2s, color .2s; }
+  .back:hover, .back:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .back:active { background: var(--neon); color: var(--on-neon); }
+  .kicker { font: 700 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--neon); }
+  h1 { margin: 6px 0 0; font: 700 clamp(22px, 3vw, 36px)/1.15 var(--head); letter-spacing: -.01em; }
+  .illus { display: inline-block; vertical-align: middle; margin-left: 10px; font: 11px var(--mono); color: var(--muted); border: 1px dashed var(--dim); border-radius: 6px; padding: 1px 7px; letter-spacing: 0; }
+
+  #params { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; pointer-events: auto; }
+  #params .src { font: 11px var(--mono); color: var(--muted); margin-right: 2px; }
+  .ppill { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--gray); background: color-mix(in srgb, var(--gray) 12%, transparent);
+    font: 12px var(--mono); cursor: pointer; transition: border-color .2s, box-shadow .2s; -webkit-tap-highlight-color: transparent; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+  .ppill b { color: var(--ink); font-weight: 700; }
+  .ppill span { color: var(--muted); }
+  .ppill:hover, .ppill:focus-visible, .ppill.on { border-color: var(--neon); box-shadow: 0 0 10px color-mix(in srgb, var(--neon) 35%, transparent); outline: none; }
+
+  #stage { position: fixed; left: 0; right: 0; top: var(--top, 150px); bottom: 118px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+  .scene { display: none; width: min(1100px, calc(100% - 64px)); margin: 0 auto; min-height: 100%; }
+  .scene.on { display: block; animation: fadein .3s ease both; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .btn { height: 38px; padding: 0 16px; border-radius: 19px; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); cursor: pointer; font-size: 14px;
+    transition: box-shadow .2s, background .2s, color .2s; -webkit-tap-highlight-color: transparent; }
+  .btn:hover, .btn:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 45%, transparent); outline: none; }
+  .btn:active { background: var(--neon); color: var(--on-neon); }
+  .word { background: none; border: 0; padding: 0; cursor: pointer; border-bottom: 1px dashed var(--neon); color: var(--neon); font: inherit; }
+  .note { font: 12px/1.5 var(--mono); color: var(--muted); text-align: center; margin: 8px 0; }
+  .formula { font: 700 clamp(14px, 2vw, 20px) var(--mono); text-align: center; margin-top: 14px; color: var(--ink); overflow-wrap: anywhere; }
+
+  /* scene 1: three buckets of clips and the pipeline */
+  .s1 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: center; padding-top: 6px; }
+  .bk { padding: 10px 12px; border: 1.2px solid var(--dim); border-radius: 12px; margin-bottom: 12px; transition: opacity .25s; }
+  .bk h4 { margin: 0 0 6px; font: 700 12px var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .bk h4 i { font: normal 11px var(--mono); }
+  .bk.dim { opacity: .25; }
+  .bk.test { border-color: var(--neon); background: color-mix(in srgb, var(--neon) 7%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--neon) 20%, transparent); }
+  .bk.test h4 { color: var(--neon); }
+  .pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cp { width: 16px; height: 8px; border-radius: 999px; border: 1px solid var(--gray); background: color-mix(in srgb, var(--gray) 18%, transparent); transition: opacity .25s; }
+  .bk.test .cp { border-color: var(--neon); background: var(--neon); }
+  .cp.sent { opacity: .15; }
+  .pipe { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .pipe .box { min-width: 150px; padding: 10px 16px; text-align: center; border: 1.3px solid var(--link); border-radius: 10px; background: color-mix(in srgb, var(--link) 10%, transparent); font: 13px var(--mono); transition: box-shadow .25s, border-color .25s; }
+  .pipe .ar { font: 18px var(--mono); color: var(--link); }
+  .pipe.busy .box { border-color: var(--neon); box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 30%, transparent); }
+  .fp { position: fixed; z-index: 5; width: 16px; height: 8px; border-radius: 999px; background: var(--neon); pointer-events: none; }
+  .fp.bad { background: var(--err); }
+
+  /* probability tables (scenes 2 and 3) */
+  .scroll { overflow-x: auto; border: 1px solid var(--dim); border-radius: 12px; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; font: 12.5px var(--mono); width: 100%; }
+  th, td { padding: 5px 8px; text-align: center; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 400; }
+  thead tr:first-child th { font-size: 10.5px; color: var(--dim); padding-bottom: 0; }
+  td.id { color: var(--muted); text-align: left; }
+  td.p { min-width: 54px; border: 2px solid var(--bg); transition: opacity .3s, outline-color .3s; }
+  .pt tbody tr { animation: fadein .35s ease both; }
+  .shape { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font: 13px var(--mono); color: var(--muted); margin: 0 0 8px; }
+  .shape code { color: var(--ink); font-size: 14px; }
+  .t3:not(.sub0) td.p:not(.max) { opacity: .28; }
+  .t3:not(.sub0) td.p.max { background: var(--neon) !important; color: var(--on-neon); font-weight: 700; }
+  .t3 .cpred, .t3 .ctrue, .t3 .cres { visibility: hidden; }
+  .t3.sub2 .cpred, .t3.sub3 .cpred, .t3.sub3 .ctrue, .t3.sub3 .cres { visibility: visible; }
+  td.cres { font-weight: 700; font-size: 15px; }
+  td.cres.ok { color: var(--neon); } td.cres.bad { color: var(--err); }
+  td.bad-t { color: var(--err); }
+
+  /* confusion matrix (scenes 4 and 5) */
+  .mx { --cs: min(60px, calc((100vw - 130px) / 6), 8.4vh); position: relative; display: inline-block; padding-bottom: 28px; }
+  .mx.mini { --cs: min(40px, calc((100vw - 120px) / 6), 6.5vh); }
+  .mgrid { position: relative; display: grid; grid-template-columns: max-content repeat(var(--k), var(--cs)); grid-template-rows: 58px repeat(var(--k), var(--cs)); gap: 3px; }
+  .mx.mini .mgrid { grid-template-rows: 48px repeat(var(--k), var(--cs)); }
+  .mgrid .corner { font: 10px/1.3 var(--mono); color: var(--dim); align-self: end; text-align: right; padding-right: 6px; }
+  .mgrid .ch { position: relative; }
+  .mgrid .ch span { position: absolute; left: 50%; bottom: 4px; transform-origin: 0 100%; transform: rotate(-45deg); white-space: nowrap; font: 11px var(--mono); color: var(--muted); }
+  .mgrid .rh { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font: 11.5px var(--mono); color: var(--muted); }
+  .mx.mini .rh, .mx.mini .ch span { font-size: 10px; }
+  .mc { position: relative; display: grid; place-items: center; border: 1px solid var(--dim); border-radius: 6px; padding: 0; background: transparent; font: 700 clamp(12px, 2.2vh, 18px) var(--mono); color: var(--dim); cursor: pointer; transition: background .2s, outline-color .2s; }
+  .mx.mini .mc { cursor: default; font-size: 12px; }
+  .mc.ok { color: var(--ink); } .mc.bad { color: var(--ink); }
+  .mc:focus-visible { outline: 2px solid var(--ink); }
+  .mc.hl { outline: 2px solid var(--ink); outline-offset: 1px; z-index: 1; }
+  .mc.pop { animation: popc .35s ease; }
+  @keyframes popc { 0% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  .frame { position: absolute; border: 1.6px dashed var(--gray); border-radius: 8px; pointer-events: none; }
+  .frame i { position: absolute; left: 0; top: 100%; margin-top: 3px; font: normal 11.5px var(--mono); color: var(--gray); white-space: nowrap; }
+  .s4 { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .dock { height: 24px; font: 12px var(--mono); color: var(--muted); }
+  #skip { margin-top: 2px; }
+
+  /* scene 5 */
+  .s5 { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; justify-content: center; }
+  .rt tbody tr { cursor: pointer; }
+  .rt tbody tr:hover td, .rt tbody tr.sel td { background: color-mix(in srgb, var(--neon) 9%, transparent); }
+  .rt tbody tr:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .rt td.n { text-align: left; color: var(--ink); }
+  .rt tr.sep td { border-top: 1px solid var(--dim); }
+  .rt td.v { color: var(--ink); min-width: 70px; }
+  .rt td.mut { color: var(--muted); }
+  .calc { margin-top: 10px; font: 12.5px/1.6 var(--mono); color: var(--ink); min-height: 4.8em; overflow-wrap: anywhere; }
+  .calc b { color: var(--neon); font-weight: 700; }
+
+  /* scene 6 */
+  .s6 { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 22px; align-items: center; }
+  .fig { display: block; width: 100%; height: auto; }
+  svg text { font-family: var(--mono); fill: var(--muted); }
+  #thr { width: 100%; accent-color: var(--neon); }
+  .thrl { font: 13px var(--mono); margin: 8px 0 4px; text-align: center; }
+  .thrl b { color: var(--neon); font-size: 20px; }
+  .cnt { display: grid; gap: 8px; }
+  .cnt div { padding: 8px 12px; border: 1px solid var(--dim); border-radius: 10px; font: 11.5px var(--mono); color: var(--muted); }
+  .cnt b { display: block; font: 700 22px var(--mono); color: var(--ink); }
+  .cnt .w b { color: var(--err); }
+  .legend { display: flex; gap: 14px; justify-content: center; font: 12px var(--mono); color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+
+  #cap { position: fixed; z-index: 2; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(720px, calc(100vw - 32px));
+    text-align: center; font-size: 14.5px; line-height: 1.45; pointer-events: none; min-height: 21px; }
+  #nav { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; }
+  #nav button, #onward { cursor: pointer; background: color-mix(in srgb, var(--bg-glow) 72%, transparent); border: 1px solid var(--neon); display: grid; place-items: center; padding: 0; backdrop-filter: blur(4px); }
+  #prev { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+  #next { width: 76px; height: 54px; border-radius: 27px; font-size: 26px; }
+  #nav button[hidden], #onward[hidden] { display: none; }
+  #nav button:disabled { opacity: .3; cursor: default; }
+  #onward { height: 44px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 22px; white-space: nowrap; font-size: 14px; color: var(--ink); text-decoration: none; }
+  #dots { display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--muted); transition: background .2s, box-shadow .2s, border-color .2s; }
+  #dots i.on { background: var(--neon); border-color: var(--neon); box-shadow: 0 0 8px var(--neon); }
+
+  #card { position: fixed; z-index: 6; left: 50%; top: 50%; width: min(380px, 88vw); max-height: 80vh; overflow-y: auto; padding: 18px 20px 16px; transform: translate(-50%, -46%);
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px; box-shadow: 0 10px 40px color-mix(in srgb, var(--bg) 50%, transparent), var(--panel-glow);
+    backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+  #card.on { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+  #card .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font: 700 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; background: var(--gray); color: var(--on-neon); }
+  #card h2 { margin: 8px 0 10px; font: 700 17px/1.25 var(--mono); color: var(--neon); word-break: break-word; }
+  #card.bad h2 { color: var(--err); }
+  #card p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.5; }
+  #card .x { font: 12px var(--mono); color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .hud { left: 16px; right: 16px; top: 18px; }
+    .scene { width: calc(100% - 32px); }
+    .s1, .s5, .s6 { grid-template-columns: 1fr; gap: 14px; }
+    .s5 { justify-items: center; }
+    .s5 .scroll { justify-self: stretch; }
+    #cap { font-size: 13px; bottom: 76px; }
+    h1 { font-size: 20px; }
+    .pipe { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    .pipe .box { min-width: 0; padding: 8px 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body data-swipe1 data-block="9">
+
+<div class="hud" id="hud">
+  <a class="back" href="../index.html#how">← all blocks</a>
+  <div class="kicker">Block 9 of 12 · Evaluation</div>
+  <h1><span id="title"></span><span class="illus" id="illus" hidden>illustrative</span></h1>
+  <div id="params" aria-label="Parameters from the notebook"></div>
+</div>
+
+<main id="stage" aria-label="Evaluation in six scenes">
+  <section class="scene" id="s1"></section>
+  <section class="scene" id="s2"></section>
+  <section class="scene" id="s3"></section>
+  <section class="scene" id="s4"></section>
+  <section class="scene" id="s5"></section>
+  <section class="scene" id="s6"></section>
+</main>
+
+<div id="cap" aria-live="polite"></div>
+<nav id="nav" aria-label="Scenes">
+  <button id="prev" type="button" aria-label="Previous step">←</button>
+  <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <button id="next" type="button" aria-label="Next step">→</button>
+  <a id="onward" aria-disabled="true" hidden>Next: Quantization →</a>
+</nav>
+<div id="card" role="dialog" aria-live="polite"></div>
+
+<!-- Optional real test results. If data/eval.js exists next to this page, it is used instead of the illustrative data.
+     Format (one value per test clip; probs is optional, otherwise six probabilities are rebuilt from conf for display):
+       window.EXS_EVAL = { classes: [6 names], y_true: [..], y_pred: [..], conf: [..], probs: [[6 numbers], ..] };
+     Without the file the page shows illustrative data and marks it "illustrative". -->
+<script src="data/eval.js"></script>
+<script src="../_shared/theme.js"></script>
+<script>
+(() => {
+'use strict';
+
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const html = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const pad2 = n => String(n).padStart(2, '0');
+
+/* ------------------------------------------------------------------
+   Data: window.EXS_EVAL from data/eval.js, or illustrative data.
+   Every metric below is computed from y_true and y_pred.
+------------------------------------------------------------------ */
+const D = window.EXS_EVAL;
+const REAL = !!(D && Array.isArray(D.y_true) && Array.isArray(D.y_pred) && D.y_true.length === D.y_pred.length);
+const CLASSES = REAL && D.classes && D.classes.length ? D.classes : ['telegram', 'elly', 'slack', 'focus', 'noise', 'unknown'];
+const K = CLASSES.length;
+const CONF_THRESHOLD = 0.80;                       // receiver default
+
+// illustrative confusion matrix (rows true, columns predicted): 36 clips, mostly diagonal
+const DEMO_M = [
+  [5, 0, 0, 0, 1, 0],   // telegram: one heard as noise
+  [0, 5, 1, 0, 0, 0],   // elly: one heard as slack
+  [0, 0, 6, 0, 0, 0],
+  [0, 0, 0, 5, 1, 0],   // focus: one heard as noise
+  [0, 0, 0, 1, 4, 1],   // noise: one heard as focus, one as unknown
+  [1, 0, 0, 0, 0, 5],   // unknown: one heard as telegram
+];
+let seed = 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+
+let Y_TRUE, Y_PRED;
+if (REAL) { Y_TRUE = D.y_true.slice(); Y_PRED = D.y_pred.slice(); }
+else {
+  const pairs = []; DEMO_M.forEach((row, t) => row.forEach((n, p) => { for (let i = 0; i < n; i++) pairs.push([t, p]); }));
+  for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
+  // keep at least one mistake among the first eight clips shown in scenes 2 and 3
+  if (!pairs.slice(0, 8).some(([t, p]) => t !== p)) { const j = pairs.findIndex(([t, p]) => t !== p); [pairs[5], pairs[j]] = [pairs[j], pairs[5]]; }
+  Y_TRUE = pairs.map(p => p[0]); Y_PRED = pairs.map(p => p[1]);
+}
+const N = Y_TRUE.length;
+
+// six probabilities per clip: given, or rebuilt from conf (winner) with the rest spread over the other classes, rounded to sum to 1.00
+const PROBS = Y_TRUE.map((t, i) => {
+  if (REAL && D.probs && D.probs[i]) return D.probs[i];
+  const p = Y_PRED[i], right = t === p;
+  let c = REAL && D.conf && D.conf[i] != null ? D.conf[i] : right ? 0.72 + 0.27 * rnd() : 0.52 + 0.30 * rnd();
+  c = Math.round(clamp(c, 1 / K + .01, .99) * 100) / 100;
+  const w = Array.from({ length: K }, (_, k) => k === p ? 0 : (0.2 + rnd()) * (k === t ? 4 : 1)), ws = w.reduce((a, b) => a + b, 0);
+  const out = w.map(v => Math.round(v / ws * (1 - c) * 100) / 100);
+  out[p] = Math.round((1 - out.reduce((a, b) => a + b, 0)) * 100) / 100;
+  return out;
+});
+const CONF = PROBS.map((r, i) => (REAL && D.conf && !D.probs && D.conf[i] != null) ? D.conf[i] : Math.max(...r));
+const ARGMAX = PROBS.map(r => r.indexOf(Math.max(...r)));
+
+// confusion matrix, per-class counts, report
+const M = Array.from({ length: K }, () => Array(K).fill(0));
+Y_TRUE.forEach((t, i) => { M[t][Y_PRED[i]]++; });
+const CELL_IDS = Array.from({ length: K }, () => Array.from({ length: K }, () => []));
+Y_TRUE.forEach((t, i) => CELL_IDS[t][Y_PRED[i]].push(i));
+const ROW = M.map(r => r.reduce((a, b) => a + b, 0));
+const COL = Array.from({ length: K }, (_, c) => M.reduce((a, r) => a + r[c], 0));
+const TP = M.map((r, i) => r[i]);
+const PREC = TP.map((tp, i) => COL[i] ? tp / COL[i] : 0);
+const REC = TP.map((tp, i) => ROW[i] ? tp / ROW[i] : 0);
+const F1 = PREC.map((p, i) => p + REC[i] ? 2 * p * REC[i] / (p + REC[i]) : 0);
+const ACC = TP.reduce((a, b) => a + b, 0) / N;
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+const wmean = a => a.reduce((x, v, i) => x + v * ROW[i], 0) / N;
+const f2 = v => v.toFixed(2);
+
+/* ------------------------------------------------------------------
+   Parameter pills, card
+------------------------------------------------------------------ */
+const PARAMS = {
+  heldout: { k: 'test', v: 'held-out speaker', h: 'test = held-out speaker', p: ['The test clips come from a speaker who is not in train or validation.', 'Why: it shows how the model behaves for a voice it has never heard.'] },
+  verbose: { k: 'verbose', v: '0', h: 'predict(X_test, verbose=0)', p: ['Turns off the progress bar of predict.', 'Why: the output stays clean. The predictions do not change.'] },
+  axis:    { k: 'axis', v: '1', h: 'axis=1', p: ['Go along each row, not down each column.', 'Each row is one clip, so argmax picks the winning class of that clip.'] },
+  labels:  { k: 'labels', v: 'range(len(CLASSES))', h: 'labels = range(len(CLASSES))', p: ['Fixes the rows and columns to the class ids 0–5, in that order.', 'Why: a class that was never predicted still gets its row and column, so the matrix and the report always line up.'] },
+  xrot:    { k: 'xticks_rotation', v: '45', h: 'xticks_rotation = 45', p: ['Tilts the column names by 45° so six long names fit.', 'Only the look of the plot, not the numbers.'] },
+  zdiv:    { k: 'zero_division', v: '0', h: 'zero_division = 0', p: ['If a class gets no predictions, precision is 0 / 0.', 'This sets the score to 0 instead of raising a warning. Why: the report always prints a number.'] },
+  thr:     { k: 'CONF_THRESHOLD', v: CONF_THRESHOLD.toFixed(2), h: 'CONF_THRESHOLD = 0.80', p: ['The receiver accepts a word only when the winning probability is at least this value.', 'This is the receiver default. It is not part of the accuracy number.'] },
+};
+const SCENES = [
+  { title: 'The test set', params: ['heldout'], cap: 'Evaluation uses the test set only. Nothing is learned here.', subs: 1 },
+  { title: 'Predict', params: ['verbose'], cap: 'Each clip gets six probabilities that add up to 1.', subs: 0 },
+  { title: 'Argmax', params: ['axis'], cap: 'argmax keeps the winner and drops how sure the model was.', subs: 3 },
+  { title: 'Confusion matrix', params: ['labels', 'xrot'], cap: 'Diagonal = correct. Everything else is a mistake, and the cell says which.', subs: 0 },
+  { title: 'Classification report', params: ['labels', 'zdiv'], cap: 'Precision: when it says elly, how often is it right? Recall: of all real elly clips, how many did it find?', subs: 4 },
+  { title: 'Confidence threshold', params: ['thr'], cap: 'A higher threshold means fewer false triggers, but more missed words.', subs: 0 },
+];
+
+const card = $('card');
+let cardKey = null;
+function closeCard() { cardKey = null; card.classList.remove('on', 'bad'); document.querySelectorAll('.ppill.on').forEach(b => b.classList.remove('on')); }
+function openCard(key, tag, head, paras, bad) {
+  if (cardKey === key) { closeCard(); return; }
+  cardKey = key; card.innerHTML = ''; card.classList.toggle('bad', !!bad);
+  html('span', 'tag', card, tag); html('h2', '', card, head);
+  paras.forEach(t => html('p', '', card, t)); html('div', 'x', card, 'tap to close');
+  card.classList.add('on');
+  document.querySelectorAll('.ppill').forEach(b => b.classList.toggle('on', b.dataset.key === key));
+}
+card.addEventListener('click', closeCard);
+addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+const openParam = id => { const P = PARAMS[id]; openCard(id, 'from notebook', P.h, P.p); };
+
+function renderParams(list) {
+  const box = $('params'); box.innerHTML = '';
+  html('span', 'src', box, 'from notebook');
+  list.forEach(id => {
+    const P = PARAMS[id], b = html('button', 'ppill', box); b.type = 'button'; b.dataset.key = id;
+    html('span', '', b, P.k + ' = '); html('b', '', b, P.v);
+    b.addEventListener('click', e => { e.stopPropagation(); openParam(id); });
+  });
+}
+
+/* ------------------------------------------------------------------
+   Shared pieces
+------------------------------------------------------------------ */
+const timers = [];
+const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+function clearTimers() { timers.splice(0).forEach(clearTimeout); document.querySelectorAll('.fp').forEach(e => e.remove()); }
+
+// a small clip pill flies from one rect to another
+function fly(fromRect, toRect, bad, ms, done) {
+  const p = html('div', 'fp' + (bad ? ' bad' : ''), document.body);
+  p.style.left = (fromRect.left + fromRect.width / 2 - 8) + 'px'; p.style.top = (fromRect.top + fromRect.height / 2 - 4) + 'px';
+  const dx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2), dy = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+  const a = p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .9 }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
+  a.onfinish = () => { p.remove(); if (done) done(); };
+}
+
+// probability table for scenes 2 and 3
+const SHOW = Math.min(8, N);
+function probTable(host, o) {
+  const wrap = html('div', 'scroll', host), t = html('table', 'pt' + (o.cls ? ' ' + o.cls : ''), wrap);
+  const h1 = html('tr', '', html('thead', '', t)); const h2 = html('tr', '', t.tHead);
+  html('th', '', h1); html('th', '', h2, 'clip');
+  CLASSES.forEach((c, i) => { html('th', '', h1, String(i)); html('th', '', h2, c); });
+  if (o.sum) { html('th', '', h1); html('th', '', h2, 'sum'); }
+  if (o.pred) { [['cpred', 'y_pred'], ['ctrue', 'y_test'], ['cres', '']].forEach(([c, n]) => { html('th', c, h1); html('th', c, h2, n); }); }
+  const body = html('tbody', '', t);
+  for (let i = 0; i < SHOW; i++) {
+    const tr = html('tr', '', body); tr.style.animationDelay = o.anim ? (i * 110) + 'ms' : '0ms';
+    html('td', 'id', tr, '#' + pad2(i));
+    PROBS[i].forEach((v, k) => {
+      const td = html('td', 'p' + (k === ARGMAX[i] ? ' max' : ''), tr, f2(v));
+      td.style.background = `color-mix(in srgb, var(--link) ${Math.round(v * 100)}%, transparent)`;
+    });
+    if (o.sum) html('td', 'mut', tr, '= ' + f2(PROBS[i].reduce((a, b) => a + b, 0))).style.color = 'var(--muted)';
+    if (o.pred) {
+      const ok = Y_PRED[i] === Y_TRUE[i];
+      html('td', 'cpred', tr, `${Y_PRED[i]} · ${CLASSES[Y_PRED[i]]}`);
+      html('td', 'ctrue' + (ok ? '' : ' bad-t'), tr, `${Y_TRUE[i]} · ${CLASSES[Y_TRUE[i]]}`);
+      html('td', 'cres ' + (ok ? 'ok' : 'bad'), tr, ok ? '✓' : '✗');
+    }
+  }
+  if (N > SHOW) { const tr = html('tr', '', body), td = html('td', 'id', tr, '… ' + (N - SHOW) + ' more clips'); td.colSpan = 20; tr.style.animationDelay = o.anim ? (SHOW * 110) + 'ms' : '0ms'; }
+  return t;
+}
+
+// confusion matrix grid. mini: no taps, smaller cells
+function buildMatrix(host, o) {
+  const mx = html('div', 'mx' + (o.mini ? ' mini' : ''), host), grid = html('div', 'mgrid', mx);
+  grid.style.setProperty('--k', K);
+  html('div', 'corner', grid).innerHTML = 'predicted →<br>true ↓';
+  CLASSES.forEach(c => html('span', '', html('div', 'ch', grid), c));
+  const cells = [];
+  for (let r = 0; r < K; r++) {
+    html('div', 'rh', grid, CLASSES[r]); cells.push([]);
+    for (let c = 0; c < K; c++) {
+      const b = html(o.mini ? 'div' : 'button', 'mc', grid, ''); if (!o.mini) b.type = 'button';
+      b.dataset.r = r; b.dataset.c = c; cells[r].push(b);
+    }
+  }
+  // paint one cell from a count (the colour strength is the share of its true-class row)
+  const paint = (r, c, n, pop) => {
+    const b = cells[r][c], f = ROW[r] ? n / ROW[r] : 0, diag = r === c, col = diag ? 'neon' : 'err';
+    b.textContent = n; b.className = 'mc' + (n ? (diag ? ' ok' : ' bad') : '') + (b.classList.contains('hl') ? ' hl' : '');
+    b.style.background = n ? `color-mix(in srgb, var(--${col}) ${Math.round(12 + 70 * f)}%, transparent)` : 'transparent';
+    b.style.borderColor = n ? `var(--${col})` : '';
+    if (pop && !reduce) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+  };
+  // dashed frame around false triggers: rows noise and unknown, command columns
+  let frame = null;
+  const place = () => {
+    const rows = ['noise', 'unknown'].map(n => CLASSES.indexOf(n)).filter(i => i >= 0), cols = CLASSES.map((c, i) => i).filter(i => !rows.includes(i));
+    if (!rows.length || !cols.length || o.mini) return;
+    if (!frame) { frame = html('div', 'frame', grid); html('i', '', frame, 'false triggers'); }
+    const a = cells[Math.min(...rows)][Math.min(...cols)], z = cells[Math.max(...rows)][Math.max(...cols)];
+    frame.style.left = (a.offsetLeft - 3) + 'px'; frame.style.top = (a.offsetTop - 3) + 'px';
+    frame.style.width = (z.offsetLeft + z.offsetWidth - a.offsetLeft + 6) + 'px'; frame.style.height = (z.offsetTop + z.offsetHeight - a.offsetTop + 6) + 'px';
+  };
+  return { mx, grid, cells, paint, place };
+}
+
+/* ------------------------------------------------------------------
+   Scene 1: the test set
+------------------------------------------------------------------ */
+function buildScene1(host) {
+  const wrap = html('div', 's1', host), left = html('div', '', wrap), right = html('div', 'pipe', wrap);
+  const sets = [
+    { k: 'train', n: 40, note: 'used in Block 8: weights and early stopping', dim: true },
+    { k: 'val', n: 12, note: 'used in Block 8: weights and early stopping', dim: true },
+    { k: 'test', n: N, note: 'held-out speaker: never seen', test: true },
+  ];
+  let testPills = [];
+  sets.forEach(s => {
+    const b = html('div', 'bk' + (s.dim ? ' dim' : '') + (s.test ? ' test' : ''), left), h = html('h4', '', b);
+    html('span', '', h, s.k); html('i', '', h, s.note);
+    const pl = html('div', 'pills', b);
+    for (let i = 0; i < s.n; i++) { const p = html('span', 'cp', pl); if (s.test) testPills.push(p); }
+  });
+  const steps = [['clip', '1 s of audio'], ['99 × 13', 'MFCC'], ['CNN', 'predict']];
+  const boxes = [];
+  steps.forEach((s, i) => { if (i) html('div', 'ar', right, '↓'); const bx = html('div', 'box', right); bx.innerHTML = `${s[0]}<br><small style="color:var(--muted)">${s[1]}</small>`; boxes.push(bx); });
+  const cnt = html('div', 'note', right, '');
+  const reset = () => { clearTimers(); testPills.forEach(p => p.classList.remove('sent')); right.classList.remove('busy'); cnt.textContent = ''; };
+  return {
+    stop: clearTimers,
+    apply(sub, anim) {
+      reset();
+      if (sub < 1) return;
+      const finish = () => { testPills.forEach(p => p.classList.add('sent')); right.classList.add('busy'); cnt.textContent = `${N} / ${N} test clips predicted`; };
+      if (!anim || reduce) { finish(); return; }
+      right.classList.add('busy');
+      testPills.forEach((p, i) => later(() => {
+        const to = boxes[0].getBoundingClientRect();
+        fly(p.getBoundingClientRect(), to, false, 520, () => { cnt.textContent = `${i + 1} / ${N} test clips predicted`; });
+        p.classList.add('sent');
+      }, i * 60));
+    },
+  };
+}
+
+/* ------------------------------------------------------------------
+   Scene 2: predict
+------------------------------------------------------------------ */
+function buildScene2(host) {
+  const sh = html('div', 'shape', host); html('code', '', sh, 'predict(X_test)'); html('span', '', sh, `shape (${N}, ${K})`);
+  let t = null, slot = html('div', '', host);
+  if (!(REAL && D.probs)) html('div', 'note', host, REAL ? 'probabilities rebuilt from conf for display' : 'probabilities are made up to match the illustrative predictions');
+  return { stop() {}, apply(sub, anim) { slot.innerHTML = ''; probTable(slot, { sum: true, anim: anim && !reduce }); } };
+}
+
+/* ------------------------------------------------------------------
+   Scene 3: argmax
+------------------------------------------------------------------ */
+function buildScene3(host) {
+  const slot = html('div', '', host), f = html('div', 'formula', host);
+  f.append('y_pred = predict(X_test).argmax(');
+  const w = html('button', 'word', f, 'axis=1'); w.type = 'button'; w.addEventListener('click', e => { e.stopPropagation(); openParam('axis'); });
+  f.append(')');
+  const t = probTable(slot, { pred: true, cls: 't3' });
+  return { stop() {}, apply(sub) { t.className = 'pt t3 sub' + sub; } };
+}
+
+/* ------------------------------------------------------------------
+   Scene 4: confusion matrix
+------------------------------------------------------------------ */
+function buildScene4(host) {
+  const wrap = html('div', 's4', host), dock = html('div', 'dock', wrap), m = buildMatrix(wrap, {});
+  const counts = Array.from({ length: K }, () => Array(K).fill(0));
+  const skip = html('button', 'btn', wrap, 'skip'); skip.id = 'skip'; skip.type = 'button';
+  let i = 0, done = false;
+  const cellInfo = (r, c) => {
+    const n = counts[r][c];
+    const list = CELL_IDS[r][c].map(id => '#' + pad2(id)).join(', ') || '—';
+    openCard(`m${r}_${c}`, r === c ? 'correct' : 'mistake', `${n} clip${n === 1 ? '' : 's'} of ${CLASSES[r]} ${n === 1 ? 'was' : 'were'} heard as ${CLASSES[c]}`, [`clip IDs: ${list}`], r !== c);
+  };
+  m.cells.forEach((rw, r) => rw.forEach((b, c) => b.addEventListener('click', e => { e.stopPropagation(); cellInfo(r, c); })));
+  const paintAll = () => { for (let r = 0; r < K; r++) for (let c = 0; c < K; c++) m.paint(r, c, counts[r][c]); };
+  const finish = () => { clearTimers(); for (let r = 0; r < K; r++) for (let c = 0; c < K; c++) counts[r][c] = M[r][c]; i = N; done = true; paintAll(); dock.textContent = `${N} clips · ${TP.reduce((a, b) => a + b, 0)} on the diagonal`; skip.hidden = true; };
+  const launch = () => {
+    if (i >= N) { finish(); return; }
+    const id = i++, t = Y_TRUE[id], p = Y_PRED[id], bad = t !== p, slow = id < 6, ms = slow ? 520 : 240;
+    dock.textContent = `clip #${pad2(id)} · true ${CLASSES[t]} → heard ${CLASSES[p]}`;
+    fly(dock.getBoundingClientRect(), m.cells[t][p].getBoundingClientRect(), bad, ms, () => { if (done) return; counts[t][p]++; m.paint(t, p, counts[t][p], true); });
+    later(launch, slow ? 560 : 110);
+  };
+  skip.addEventListener('click', e => { e.stopPropagation(); finish(); });
+  const relayout = () => requestAnimationFrame(m.place);
+  addEventListener('resize', relayout);
+  paintAll();
+  return {
+    stop() { clearTimers(); removeEventListener('resize', relayout); },
+    apply(sub, anim) {
+      relayout();
+      if (!anim || reduce) { finish(); return; }
+      later(launch, 350);
+    },
+  };
+}
+
+/* ------------------------------------------------------------------
+   Scene 5: classification report
+------------------------------------------------------------------ */
+function buildScene5(host) {
+  const wrap = html('div', 's5', host), left = html('div', '', wrap), right = html('div', '', wrap);
+  const m = buildMatrix(left, { mini: true });
+  for (let r = 0; r < K; r++) for (let c = 0; c < K; c++) m.paint(r, c, M[r][c]);
+  const sc = html('div', 'scroll', right), t = html('table', 'rt', sc), hr = html('tr', '', html('thead', '', t));
+  ['', 'precision', 'recall', 'f1-score', 'support'].forEach(n => html('th', '', hr, n));
+  const body = html('tbody', '', t);
+  const cells = [];   // { td, min }: shown from this step on (support 1, recall 2, precision 3, f1 4)
+  const rows = [];
+  const put = (tr, cls, text, min) => { const td = html('td', cls, tr, text); cells.push({ td, min }); return td; };
+  CLASSES.forEach((c, i) => {
+    const tr = html('tr', '', body); tr.tabIndex = 0; tr.dataset.i = i; rows.push(tr);
+    html('td', 'n', tr, c);
+    put(tr, 'v', f2(PREC[i]), 3); put(tr, 'v', f2(REC[i]), 2); put(tr, 'v', f2(F1[i]), 4); put(tr, 'v mut', String(ROW[i]), 1);
+  });
+  const addRow = (name, p, r, f, s, sep) => { const tr = html('tr', sep ? 'sep' : '', body); html('td', 'n', tr, name); put(tr, 'v', p, 3); put(tr, 'v', r, 2); put(tr, 'v', f, 4); put(tr, 'v mut', s, 1); };
+  addRow('accuracy', '', '', f2(ACC), String(N), true);
+  addRow('macro avg', f2(mean(PREC)), f2(mean(REC)), f2(mean(F1)), String(N));
+  addRow('weighted avg', f2(wmean(PREC)), f2(wmean(REC)), f2(wmean(F1)), String(N));
+  const calc = html('div', 'calc', right);
+  let sub = 0, sel = CLASSES.indexOf('elly') >= 0 ? CLASSES.indexOf('elly') : 0;
+  const showCalc = () => {
+    const i = sel, n = CLASSES[i], b = s => `<b>${s}</b>`, lines = [];
+    if (sub < 1) { calc.textContent = 'tap to fill the next column'; return; }
+    lines.push(`support = row sum = ${M[i].join(' + ')} = ${b(ROW[i])}`);
+    if (sub >= 2) lines.push(`recall = TP / (TP + FN) = ${TP[i]} / ${ROW[i]} = ${b(f2(REC[i]))}`);
+    if (sub >= 3) lines.push(`precision = TP / (TP + FP) = ${TP[i]} / ${COL[i]} = ${b(f2(PREC[i]))}`);
+    if (sub >= 4) lines.push(`f1 = 2·P·R / (P + R) = 2·${f2(PREC[i])}·${f2(REC[i])} / (${f2(PREC[i])} + ${f2(REC[i])}) = ${b(f2(F1[i]))}`);
+    calc.innerHTML = `<span style="color:var(--muted)">${n}</span><br>` + lines.join('<br>');
+  };
+  const refresh = () => {
+    cells.forEach(c => { c.td.style.visibility = sub >= c.min ? 'visible' : 'hidden'; });
+    rows.forEach((r, i) => r.classList.toggle('sel', i === sel));
+    // support and recall use the row, precision the column, f1 both
+    m.cells.forEach((rw, r) => rw.forEach((b, c) => {
+      const inRow = sub >= 1 && r === sel && (sub !== 3), inCol = sub >= 3 && c === sel;
+      b.classList.toggle('hl', inRow || inCol);
+    }));
+    showCalc();
+  };
+  rows.forEach((tr, i) => tr.addEventListener('click', e => {
+    e.stopPropagation(); sel = i; refresh();
+    if (sub >= 2 && ROW[i] === 0) openCard('zd' + i, 'zero_division', 'zero_division=0: no predictions, score set to 0', [`${CLASSES[i]} has no real clips, so recall would be 0 / 0.`]);
+    else if (sub >= 3 && COL[i] === 0) openCard('zd' + i, 'zero_division', 'zero_division=0: no predictions, score set to 0', [`The model never said ${CLASSES[i]}, so precision would be 0 / 0.`]);
+  }));
+  rows.forEach(tr => tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tr.click(); } }));
+  return { stop() {}, apply(s) { sub = s; refresh(); } };
+}
+
+/* ------------------------------------------------------------------
+   Scene 6: confidence threshold
+------------------------------------------------------------------ */
+function buildScene6(host) {
+  const wrap = html('div', 's6', host), left = html('div', '', wrap), right = html('div', '', wrap);
+  const W = 640, H = 270, L = 36, R = 10, T = 14, B = 34, LO = 0.40, BIN = 0.05, NB = Math.round((1 - LO) / BIN);
+  const svg = el('svg', { class: 'fig', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Histogram of the winning probability, correct and wrong clips' }, left);
+  const ok = Array(NB).fill(0), bad = Array(NB).fill(0);
+  CONF.forEach((c, i) => { const b = clamp(Math.floor((c - LO) / BIN + 1e-9), 0, NB - 1); (Y_PRED[i] === Y_TRUE[i] ? ok : bad)[b]++; });
+  const mx = Math.max(1, ...ok.map((v, i) => v + bad[i])), bw = (W - L - R) / NB, X = v => L + (v - LO) / (1 - LO) * (W - L - R), base = H - B, sy = (H - B - T) / mx;
+  el('line', { x1: L, x2: W - R, y1: base, y2: base, stroke: THEME.dim }, svg);
+  const bars = [];
+  for (let i = 0; i < NB; i++) {
+    const x = L + i * bw + 2, g = el('g', {}, svg), hOk = ok[i] * sy, hBad = bad[i] * sy;
+    if (ok[i]) el('rect', { x, y: base - hOk, width: bw - 4, height: hOk, rx: 2, fill: THEME.neon }, g);
+    if (bad[i]) el('rect', { x, y: base - hOk - hBad, width: bw - 4, height: hBad, rx: 2, fill: THEME.err }, g);
+    bars.push({ g, hi: LO + (i + 1) * BIN });
+  }
+  for (let v = LO; v <= 1.0001; v += 0.1) { const x = X(v); el('text', { x, y: base + 16, 'text-anchor': 'middle', 'font-size': 10.5 }, svg, v.toFixed(1)); el('line', { x1: x, x2: x, y1: base, y2: base + 4, stroke: THEME.dim }, svg); }
+  el('text', { x: (L + W - R) / 2, y: H - 4, 'text-anchor': 'middle', 'font-size': 11 }, svg, 'confidence of the winner (max probability)');
+  el('text', { x: L - 6, y: T + 8, 'text-anchor': 'end', 'font-size': 10 }, svg, mx);
+  const line = el('line', { y1: T - 4, y2: base, stroke: THEME.ink, 'stroke-width': 1.6, 'stroke-dasharray': '4 3' }, svg);
+  const lg = html('div', 'legend', left); lg.innerHTML = '<span><i style="background:var(--neon)"></i>right</span><span><i style="background:var(--err)"></i>wrong</span>';
+  const lab = html('div', 'thrl', right), sl = html('input', '', right); sl.id = 'thr'; sl.type = 'range'; sl.min = 0.5; sl.max = 0.99; sl.step = 0.01; sl.value = CONF_THRESHOLD; sl.setAttribute('aria-label', 'confidence threshold');
+  const cnt = html('div', 'cnt', right), cA = html('div', '', cnt), cR = html('div', '', cnt), cW = html('div', 'w', cnt), cC = html('div', '', cnt);
+  function update() {
+    const th = +sl.value; let acc = 0, wr = 0;
+    CONF.forEach((c, i) => { if (c >= th - 1e-9) { acc++; if (Y_PRED[i] !== Y_TRUE[i]) wr++; } });
+    lab.innerHTML = `threshold <b>${th.toFixed(2)}</b>` + (Math.abs(th - CONF_THRESHOLD) < 1e-9 ? '<br><span style="color:var(--muted)">receiver default</span>' : '');
+    line.setAttribute('x1', X(th)); line.setAttribute('x2', X(th));
+    bars.forEach(b => b.g.setAttribute('opacity', b.hi <= th ? .3 : 1));
+    cA.innerHTML = `accepted<b>${acc}</b>`; cR.innerHTML = `rejected<b>${N - acc}</b>`; cW.innerHTML = `wrong among accepted<b>${wr}</b>`;
+    cC.innerHTML = `accuracy, all clips<b>${(ACC * 100).toFixed(0)}%</b>`;
+  }
+  sl.addEventListener('input', update); update();
+  return { stop() {}, apply() {} };
+}
+
+/* ------------------------------------------------------------------
+   Scenes: steps (tap or arrow forward, back rolls back), dots
+------------------------------------------------------------------ */
+const BUILD = [buildScene1, buildScene2, buildScene3, buildScene4, buildScene5, buildScene6];
+const NSCENES = BUILD.length, dots = Array.from($('dots').children), prevBtn = $('prev'), nextBtn = $('next'), onward = $('onward'), stage = $('stage');
+let scene = 0, sub = 0, cur = null;
+const fitTop = () => stage.style.setProperty('--top', ($('hud').offsetHeight + 24) + 'px');
+function show(n, s, anim) {
+  n = clamp(n, 1, NSCENES); s = clamp(s, 0, SCENES[n - 1].subs);
+  if (n !== scene) {
+    if (cur) cur.stop(); clearTimers(); closeCard();
+    const host = $('s' + n); host.innerHTML = ''; scene = n;
+    document.querySelectorAll('.scene').forEach((x, i) => x.classList.toggle('on', i === n - 1));
+    dots.forEach((d, i) => d.classList.toggle('on', i === n - 1));
+    $('title').textContent = SCENES[n - 1].title; $('cap').textContent = SCENES[n - 1].cap; renderParams(SCENES[n - 1].params);
+    cur = BUILD[n - 1](host); stage.scrollTop = 0; fitTop();
+  } else closeCard();
+  sub = s; cur.apply(s, anim);
+  const last = n === NSCENES && s === SCENES[n - 1].subs;
+  prevBtn.disabled = n === 1 && s === 0; nextBtn.hidden = last; onward.hidden = !last;
+}
+const next = () => { if (sub < SCENES[scene - 1].subs) show(scene, sub + 1, true); else if (scene < NSCENES) show(scene + 1, 0, true); };
+const prev = () => { if (sub > 0) show(scene, sub - 1, true); else if (scene > 1) show(scene - 1, SCENES[scene - 2].subs, false); };
+prevBtn.addEventListener('click', prev); nextBtn.addEventListener('click', next);
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key === 'ArrowRight') next(); else if (e.key === 'ArrowLeft') prev(); });
+document.addEventListener('click', e => { if (cardKey && !card.contains(e.target) && !e.target.closest('.ppill')) closeCard(); });
+let rz = 0, lastNarrow = innerWidth < 760;
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { fitTop(); const nw = innerWidth < 760; if (nw !== lastNarrow) { lastNarrow = nw; const s = scene, b = sub; scene = 0; show(s, b, false); } }, 120); });
+
+$('illus').hidden = REAL;
+show(1, 0, true);
+document.fonts && document.fonts.ready.then(fitTop);
+
+window.__exs = { scene: () => scene, sub: () => sub, go: (n, s) => show(n, s || 0, false), next, prev, real: REAL, metrics: { M, PREC, REC, F1, ACC, ROW, COL } };
+})();
+</script>
+<script src="../_shared/blocks.js"></script>
+<script src="../_shared/tapstep.js"></script><script src="../_shared/swipe.js" defer></script>
+</body>
+</html>
